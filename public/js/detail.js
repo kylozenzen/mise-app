@@ -3,7 +3,22 @@
 
 let currentRecipe = null;
 
-function renderRecipeDetail(recipe) {
+function renderRecipeDetail(recipeOrId) {
+  // Polymorphic check: If it's a string ID, find the object in your global collection
+  let recipe;
+  if (typeof recipeOrId === 'string') {
+    recipe = recipes.find(r => String(r.id) === recipeOrId);
+  } else {
+    recipe = recipeOrId;
+  }
+
+  // Guard clause: if no valid recipe object is found, abort gracefully
+  if (!recipe) {
+    console.error("Mise Detail Error: Could not resolve recipe from input:", recipeOrId);
+    showToast("Could not open recipe details.");
+    return;
+  }
+
   currentRecipe = recipe;
   switchView('detail');
 
@@ -20,7 +35,7 @@ function renderRecipeDetail(recipe) {
 
   let html = '';
 
-  // 1. Injected Save Call-To-Action Banner if viewing external payload string
+  // Injected Save Call-To-Action Banner if viewing external payload string
   if (isSharedView) {
     html += `
       <div class="shared-recipe-banner" style="background:var(--surface2);padding:16px;border:1px dashed var(--amber);margin-bottom:20px;border-radius:var(--radius-sm);text-align:center">
@@ -128,7 +143,7 @@ function formatAmount(num) {
   return num.toFixed(1).replace(/\.0$/, '');
 }
 
-// ── NEW: SHARE SERIALIZATION MATRIX CONTROLLER ───────────────────────────────
+// ── SHARE SERIALIZATION MATRIX CONTROLLER ───────────────────────────────
 function shareCurrentRecipe() {
   if (!currentRecipe) return;
 
@@ -154,7 +169,7 @@ function shareCurrentRecipe() {
   }
 }
 
-// ── NEW: IMPORT INTERCEPT COMMIT HANDLER ─────────────────────────────────────
+// ── IMPORT INTERCEPT COMMIT HANDLER ─────────────────────────────────────
 function saveSharedToLibrary() {
   if (!currentRecipe) return;
   
