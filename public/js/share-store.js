@@ -1,9 +1,7 @@
 // ── netlify/functions/share-store.js ─────────────────────────────────────────
 // Serverless Key-Value Router using Netlify Blobs for short-link resolution
 
-import { getStore } from '@netlify/blobs';
-
-export const handler = async (event, context) => {
+exports.handler = async (event, context) => {
   // Setup standard CORS & preflight response headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -17,7 +15,8 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Open or initialize a dedicated storage bucket partition named "shared_recipes"
+    // Dynamically load the Netlify Blobs module to safely handle serverless scopes
+    const { getStore } = await import('@netlify/blobs');
     const store = getStore('shared_recipes');
 
     // ── POST: Generate a new short-key and save the recipe data payload ──────
@@ -57,7 +56,7 @@ export const handler = async (event, context) => {
       return {
         statusCode: 200,
         headers,
-        body: rawRecipe // Sends back the raw stored recipe JSON string matching the short key mapping
+        body: rawRecipe
       };
     }
 
