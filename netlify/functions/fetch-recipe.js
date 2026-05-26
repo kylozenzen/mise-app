@@ -1,390 +1,216 @@
-/**
- * Mise — fetch-recipe Netlify Function
- * 
- * Fetches a recipe URL server-side (bypasses browser CORS),
- * extracts schema.org/Recipe JSON-LD, falls back to HTML heuristics.
- * 
- * POST /.netlify/functions/fetch-recipe
- * Body: { "url": "https://www.allrecipes.com/recipe/..." }
- * Returns: { title, servings, ingredients[], steps[], macros{}, source }
- */
+// ── fetch-recipe.js ─────────────────────────────────────────────────────────
+// Netlify server function to bypass CORS, retrieve recipe html, and parse JSON-LD structural graphs
 
-const HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
+const https = require('https');
 
-export async function handler(event) {
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: HEADERS, body: '' };
-  }
-
+exports.handler = async (event, context) => {
+  // Guard against non-POST configuration pre-flights
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  let url;
-  try {
-    const body = JSON.parse(event.body || '{}');
-    url = body.url;
-  } catch {
-    return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
-
-  if (!url || !isValidUrl(url)) {
-    return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Invalid or missing URL' }) };
-  }
-
-  // Block non-recipe-ish domains and local network requests
-  try {
-    const parsed = new URL(url);
-    const blocked = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
-    if (blocked.includes(parsed.hostname)) {
-      return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Invalid URL' }) };
-    }
-  } catch {
-    return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Invalid URL' }) };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method Not Allowed' }),
+    };
   }
 
   try {
-    const html = await fetchPage(url);
-    const recipe = extractRecipe(html, url);
-
-    if (!recipe.title && !recipe.ingredients.length) {
+    const { url } = JSON.parse(event.body);
+    if (!url) {
       return {
-        statusCode: 422,
-        headers: HEADERS,
-        body: JSON.stringify({ error: 'No recipe found on this page. Try copying the text and using Paste instead.' })
+        statusCode: 400,
+        body: JSON.stringify({ error: 'URL parameter is required' }),
       };
     }
 
+    // Download the raw HTML content from the recipe source path safely server-side
+    const html = await fetchHtmlContent(url);
+
+    // Attempt Server-Side structured extraction to optimize performance load
+    const jsonLdData = extractJsonLd(html);
+    
+    if (jsonLdData) {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonLdData)
+      };
+    }
+
+    // Fallback: Return raw html to client so client-side domestic regex systems can try fallback routines
     return {
       statusCode: 200,
-      headers: HEADERS,
-      body: JSON.stringify(recipe),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html })
     };
 
-  } catch (err) {
-    console.error('fetch-recipe error:', err.message);
-    // If the error message is our friendly one, pass it through
-    const friendly = err.message.includes('blocks') || err.message.includes('not found') ||
-                     err.message.includes('rate-limit') || err.message.includes('returned an error');
+  } catch (error) {
+    console.error('Server side fetch failure:', error.message);
     return {
       statusCode: 500,
-      headers: HEADERS,
-      body: JSON.stringify({
-        error: friendly
-          ? err.message
-          : 'Could not fetch this page. Try copying the recipe text and using Paste instead.'
-      })
+      body: JSON.stringify({ error: 'Failed to access or parse target recipe address: ' + error.message }),
     };
   }
-}
+};
 
-// ─── FETCH ────────────────────────────────────────────────────────────────────
-
-// Rotate through a few realistic UAs — some sites block identical repeated requests
-const USER_AGENTS = [
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
-];
-
-async function fetchPage(url) {
-  const ua      = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-  const headers = {
-    'User-Agent':      ua,
-    'Accept':          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Cache-Control':   'no-cache',
-    'Pragma':          'no-cache',
-    'Sec-Fetch-Dest':  'document',
-    'Sec-Fetch-Mode':  'navigate',
-    'Sec-Fetch-Site':  'none',
-    'Upgrade-Insecure-Requests': '1',
-  };
-
-  // First attempt
-  let res = await fetch(url, { headers, redirect: 'follow', signal: AbortSignal.timeout(10000) });
-
-  // Some sites return 403 on first hit but allow a retry — try once more
-  if (res.status === 403 || res.status === 429) {
-    await new Promise(r => setTimeout(r, 800));
-    res = await fetch(url, { headers, redirect: 'follow', signal: AbortSignal.timeout(10000) });
-  }
-
-  if (!res.ok) {
-    const friendly = {
-      403: 'This site blocks automated access. Copy the recipe text and use Paste instead.',
-      404: 'Recipe page not found — check the URL.',
-      429: 'This site is rate-limiting requests. Try again in a moment.',
-      500: 'The recipe site returned an error. Try Paste instead.',
+// Standard node runtime https consumer stack wrapper
+function fetchHtmlContent(targetUrl) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+      },
+      timeout: 7000
     };
-    throw new Error(friendly[res.status] || `HTTP ${res.status}`);
-  }
 
-  return res.text();
-}
-
-// ─── EXTRACT ──────────────────────────────────────────────────────────────────
-
-function extractRecipe(html, sourceUrl) {
-  // 1. Try schema.org/Recipe JSON-LD first (most reliable)
-  const jsonLd = extractJsonLd(html);
-  if (jsonLd) return jsonLd;
-
-  // 2. Try Open Graph / meta tags for at least a title
-  const metaTitle = extractMetaTitle(html);
-
-  // 3. Fall back to HTML heuristics (same logic as client-side parser)
-  const heuristic = extractHeuristic(html);
-  if (metaTitle && !heuristic.title) heuristic.title = metaTitle;
-
-  heuristic.source = sourceUrl;
-  return heuristic;
-}
-
-function extractJsonLd(html) {
-  // Find all JSON-LD script blocks
-  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  let match;
-
-  while ((match = scriptRe.exec(html)) !== null) {
-    try {
-      let data = JSON.parse(match[1]);
-
-      // Handle @graph arrays (common on WordPress sites)
-      if (data['@graph']) data = data['@graph'];
-      if (Array.isArray(data)) {
-        data = data.find(d => normalizeType(d['@type']) === 'recipe');
+    https.get(targetUrl, options, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        // Handle redirect configurations cleanly
+        return resolve(fetchHtmlContent(res.headers.location));
       }
 
-      if (!data || normalizeType(data['@type']) !== 'recipe') continue;
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Server returned status code: ${res.statusCode}`));
+      }
 
-      return parseSchemaRecipe(data);
-    } catch {
-      continue;
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => resolve(data));
+    }).on('error', (err) => reject(err));
+  });
+}
+
+// Server-side extraction of inline metadata targets without heavy DOM package dependencies like cheerio
+function extractJsonLd(html) {
+  const jsonLdRegex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+
+  while ((match = jsonLdRegex.exec(html)) !== null) {
+    try {
+      const rawText = match[1].trim();
+      const parsed = JSON.parse(rawText);
+      const recipeNode = findRecipeNodeInGraph(parsed);
+      
+      if (recipeNode) {
+        return normalizeRecipeObject(recipeNode);
+      }
+    } catch (e) {
+      // Advance execution loops if singular script target contains corrupted array nodes
     }
   }
   return null;
 }
 
-function normalizeType(type) {
-  if (!type) return '';
-  const t = Array.isArray(type) ? type[0] : type;
-  return t.toLowerCase().replace('http://schema.org/', '').replace('https://schema.org/', '');
-}
+function findRecipeNodeInGraph(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  if (obj['@type'] === 'Recipe' || (Array.isArray(obj['@type']) && obj['@type'].includes('Recipe'))) return obj;
 
-function parseSchemaRecipe(data) {
-  const title = stripHtml(data.name || '');
-
-  // Servings
-  let servings = 4;
-  const yieldRaw = data.recipeYield;
-  if (yieldRaw) {
-    const yieldStr = Array.isArray(yieldRaw) ? yieldRaw[0] : yieldRaw;
-    const yieldNum = parseInt(yieldStr);
-    if (!isNaN(yieldNum)) servings = yieldNum;
-  }
-
-  // Ingredients
-  const ingredients = (data.recipeIngredient || []).map(raw => {
-    return parseIngredientString(stripHtml(raw));
-  }).filter(i => i.name);
-
-  // Steps
-  const steps = [];
-  const instructions = data.recipeInstructions || [];
-  for (const step of instructions) {
-    if (typeof step === 'string') {
-      const clean = stripHtml(step).trim();
-      if (clean) steps.push(clean);
-    } else if (step['@type'] === 'HowToStep') {
-      const clean = stripHtml(step.text || step.name || '').trim();
-      if (clean) steps.push(clean);
-    } else if (step['@type'] === 'HowToSection') {
-      // Sections contain nested steps
-      for (const s of (step.itemListElement || [])) {
-        const clean = stripHtml(s.text || s.name || '').trim();
-        if (clean) steps.push(clean);
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findRecipeNodeInGraph(item);
+      if (found) return found;
+    }
+  } else {
+    if (obj['@graph'] && Array.isArray(obj['@graph'])) {
+      return findRecipeNodeInGraph(obj['@graph']);
+    }
+    for (const key in obj) {
+      if (typeof obj[key] === 'object') {
+        const found = findRecipeNodeInGraph(obj[key]);
+        if (found) return found;
       }
     }
   }
-
-  // Macros — schema.org uses strings like "420 calories", "38 g"
-  const n = data.nutrition || {};
-  const macros = {
-    cal: parseNutritionVal(n.calories),
-    protein: parseNutritionVal(n.proteinContent),
-    carbs: parseNutritionVal(n.carbohydrateContent),
-    fat: parseNutritionVal(n.fatContent),
-  };
-  const hasMacros = Object.values(macros).some(v => v > 0);
-
-  // Tags from keywords
-  const tags = [];
-  if (data.keywords) {
-    const kw = typeof data.keywords === 'string'
-      ? data.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 5)
-      : (Array.isArray(data.keywords) ? data.keywords.slice(0, 5) : []);
-    tags.push(...kw);
-  }
-  if (data.recipeCategory) {
-    const cats = Array.isArray(data.recipeCategory) ? data.recipeCategory : [data.recipeCategory];
-    tags.push(...cats.map(c => c.trim()).filter(Boolean));
-  }
-
-  return {
-    title,
-    servings,
-    ingredients,
-    steps,
-    macros: hasMacros ? macros : {},
-    tags: [...new Set(tags)].slice(0, 6),
-    source: 'schema.org',
-  };
+  return null;
 }
 
-function parseNutritionVal(raw) {
-  if (!raw) return 0;
-  const match = String(raw).match(/(\d+(\.\d+)?)/);
-  return match ? Math.round(parseFloat(match[1])) : 0;
-}
-
-// ─── HEURISTIC FALLBACK ───────────────────────────────────────────────────────
-
-function extractMetaTitle(html) {
-  const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-  if (og) return stripHtml(og[1]);
-  const title = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  if (title) return stripHtml(title[1]).replace(/\s*[-|].*$/, '').trim();
-  return '';
-}
-
-function extractHeuristic(html) {
-  // Strip scripts, styles, nav, footer to reduce noise
-  const body = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<nav[\s\S]*?<\/nav>/gi, '')
-    .replace(/<footer[\s\S]*?<\/footer>/gi, '')
-    .replace(/<header[\s\S]*?<\/header>/gi, '')
-    .replace(/<[^>]+>/g, '\n')
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0);
-
-  // Use same heuristics as client-side parser
-  const UNIT_WORDS = ['cup','cups','tbsp','tsp','tablespoon','tablespoons','teaspoon','teaspoons',
-    'oz','ounce','ounces','lb','lbs','pound','pounds','g','gram','grams','kg','ml',
-    'clove','cloves','slice','slices','bunch','can','cans','package','pkg','pinch','dash','sprig'];
-
-  const stepLineIndices = new Set();
-  const steps = [];
-  const ingredients = [];
-  let title = '';
-  let inSteps = false;
-
-  // First pass: claim steps
-  body.forEach((line, idx) => {
-    if (/^(instruction|method|direction|preparation|how to)/i.test(line)) {
-      inSteps = true; stepLineIndices.add(idx); return;
-    }
-    if (looksLikeStep(line)) {
-      const clean = line.replace(/^\d+[\.\)\-]\s*/, '').trim();
-      if (clean.length > 8) { steps.push(clean); stepLineIndices.add(idx); inSteps = true; }
-    } else if (inSteps && line.length > 20 && !looksLikeIngredient(line, UNIT_WORDS)) {
-      if (!line.match(/^[-•*·]/)) { steps.push(line); stepLineIndices.add(idx); }
-    }
-  });
-
-  // Second pass: find title and ingredients
-  for (let i = 0; i < Math.min(10, body.length); i++) {
-    const l = body[i];
-    if (!stepLineIndices.has(i) && !looksLikeIngredient(l, UNIT_WORDS) && l.length > 3 && l.length < 120) {
-      title = l; break;
-    }
+function normalizeRecipeObject(node) {
+  const title = node.name ? node.name.replace(/&amp;/g, '&').trim() : 'Untitled Live Recipe';
+  
+  let servings = 4;
+  if (node.recipeYield) {
+    const yieldMatch = String(node.recipeYield).match(/\d+/);
+    if (yieldMatch) servings = parseInt(yieldMatch[0]);
   }
 
+  // Pure clean structured ingredient arrays straight from schema fields safely
+  const ingredients = (node.recipeIngredient || node.ingredients || []).map(ing => {
+    return parseIngredientString(String(ing).replace(/\s+/g, ' ').trim());
+  }).filter(i => i.name.length > 0);
+
+  let steps = [];
+  const rawInstructions = node.recipeInstructions || node.instructions || [];
+  
+  if (typeof rawInstructions === 'string') {
+    steps = rawInstructions.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  } else if (Array.isArray(rawInstructions)) {
+    const processSteps = (arr) => {
+      arr.forEach(item => {
+        if (typeof item === 'string') {
+          if (item.trim().length > 0) steps.push(item.trim());
+        } else if (item && typeof item === 'object') {
+          if (item['@type'] === 'HowToStep' && item.text) {
+            steps.push(item.text.trim());
+          } else if (item.itemListElement && Array.isArray(item.itemListElement)) {
+            processSteps(item.itemListElement);
+          } else if (item.text) {
+            steps.push(item.text.trim());
+          }
+        }
+      });
+    };
+    processSteps(rawInstructions);
+  }
+
+  const macros = { cal: 0, protein: 0, carbs: 0, fat: 0 };
+  if (node.nutrition && typeof node.nutrition === 'object') {
+    const n = node.nutrition;
+    if (n.calories) macros.cal = parseInt(String(n.calories).replace(/[^\d]/g, '')) || 0;
+    if (n.proteinContent) macros.protein = parseInt(String(n.proteinContent).replace(/[^\d]/g, '')) || 0;
+    if (n.carbohydrateContent) macros.carbs = parseInt(String(n.carbohydrateContent).replace(/[^\d]/g, '')) || 0;
+    if (n.fatContent) macros.fat = parseInt(String(n.fatContent).replace(/[^\d]/g, '')) || 0;
+  }
+
+  return { title, servings, ingredients, steps, macros, source: 'schema.org' };
+}
+
+function parseIngredientString(text) {
+  const UNITS = ['cup','cups','tbsp','tsp','tablespoon','tablespoons','teaspoon','teaspoons',
+    'oz','ounce','ounces','lb','lbs','pound','pounds','g','gram','grams','kg','ml','liter','liters',
+    'clove','cloves','slice','slices','bunch','can','cans','package','pkg','piece','pieces',
+    'handful','pinch','dash','splash','sprig','sprigs'];
   const FRACS = {'½':0.5,'¼':0.25,'¾':0.75,'⅓':0.333,'⅔':0.667,'⅛':0.125,'⅜':0.375,'⅝':0.625,'⅞':0.875};
 
-  body.forEach((line, idx) => {
-    if (stepLineIndices.has(idx)) return;
-    if (!looksLikeIngredient(line, UNIT_WORDS)) return;
-    ingredients.push(parseIngredientString(line, FRACS, UNIT_WORDS));
-  });
+  let clean = text.replace(/^[-•*·]\s*/, '');
+  let amount = '', unit = '';
 
-  return { title, servings: 4, ingredients: ingredients.filter(i => i.name), steps, macros: {}, tags: [] };
-}
-
-function looksLikeIngredient(line, unitWords) {
-  if (/^\d+[\.\)]\s+[A-Z]/.test(line)) return false;
-  if (/^(add|mix|stir|cook|bake|heat|pour|combine|place|remove|let|bring|reduce|season|drain|chop|dice|slice|preheat|whisk|fold|transfer|serve)\b/i.test(line)) return false;
-  const units = unitWords || [];
-  const l = line.replace(/^[-•*·]\s*/, '');
-  return /^[\d½¼¾⅓⅔⅛⅜⅝⅞]/.test(l) ||
-    /^(a |an |one |two |three |four |five |six |eight |ten |twelve )/i.test(l) ||
-    new RegExp(`\\b(${units.join('|')})\\b`, 'i').test(l);
-}
-
-function looksLikeStep(line) {
-  if (/^\d+[\.\)\-]\s+\S/.test(line)) return true;
-  if (/^(add|mix|stir|cook|bake|heat|pour|combine|place|remove|let|bring|reduce|season|drain|chop|dice|slice|preheat|whisk|fold|transfer|serve)\b/i.test(line)) return true;
-  return false;
-}
-
-function parseIngredientString(raw, fracs, unitWords) {
-  const FRACS = fracs || {'½':0.5,'¼':0.25,'¾':0.75,'⅓':0.333,'⅔':0.667,'⅛':0.125};
-  const UNITS = unitWords || ['cup','cups','tbsp','tsp','tablespoon','teaspoon','oz','lb','gram','g','clove','pinch','can','package'];
-
-  let clean = raw.replace(/^[-•*·]\s*/, '').trim();
-  let amount = '';
-  let unit = '';
-
-  const fracMatch = clean.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])\s*/);
-  if (fracMatch) { amount = String(FRACS[fracMatch[1]] || 0); clean = clean.slice(fracMatch[0].length); }
-
-  const numMatch = clean.match(/^(\d+(?:[\/\.]\d+)?(?:\s*[½¼¾⅓⅔⅛⅜⅝⅞])?)\s*/);
-  if (numMatch) {
-    const numStr = numMatch[1];
-    if (numStr.includes('/')) {
-      const parts = numStr.split('/');
-      amount = String(parseFloat(amount || 0) + parseFloat(parts[0]) / parseFloat(parts[1]));
-    } else {
-      amount = String(parseFloat(amount || 0) + parseFloat(numStr));
-    }
-    clean = clean.slice(numMatch[0].length);
+  const fractionMatch = clean.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])\s*/);
+  if (fractionMatch) { 
+    amount = String(FRACS[fractionMatch[1]] || 0); 
+    clean = clean.slice(fractionMatch[0].length); 
   }
-
-  const unitReg = new RegExp(`^(${UNITS.join('|')})\\.?\\s*`, 'i');
-  const unitMatch = clean.match(unitReg);
-  if (unitMatch) { unit = unitMatch[1].toLowerCase(); clean = clean.slice(unitMatch[0].length); }
-
+  
+  // Cleanly identify pure digit/fraction borders without stripping character strings down inside names like garlic
+  const numericMatch = clean.match(/^(\d+(?:[\/\.]\d+)?(?:\s*[½¼¾⅓⅔⅛⅜⅝⅞])?)\s*/);
+  if (numericMatch) {
+    const valueStr = numericMatch[1];
+    if (valueStr.includes('/')) { 
+      const parts = valueStr.split('/'); 
+      amount = String(parseFloat(parts[0]) / parseFloat(parts[1])); 
+    } else {
+      amount = String(parseFloat(amount || 0) + parseFloat(valueStr));
+    }
+    clean = clean.slice(numericMatch[0].length);
+  }
+  
+  // Boundary checks (\b) prevent splitting words containing units inside them (like "g" in "garlic")
+  const unitRegex = new RegExp(`^\\b(${UNITS.join('|')})\\b\\.?\\s*`, 'i');
+  const unitMatch = clean.match(unitRegex);
+  if (unitMatch) { 
+    unit = unitMatch[1].toLowerCase(); 
+    clean = clean.slice(unitMatch[0].length); 
+  }
+  
   const name = clean.replace(/,.*$/, '').trim();
   return { amount, unit, name };
-}
-
-function stripHtml(str) {
-  return String(str)
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function isValidUrl(str) {
-  try {
-    const u = new URL(str);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
