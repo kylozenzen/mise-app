@@ -3,14 +3,28 @@
  * Cache-first for app shell, network-first for Netlify functions
  */
 
+// 1. Incrementing version to 'mise-v2' immediately kills the 'mise-v1' cache layer
 const CACHE_NAME = 'mise-v2';
+
+// 2. Added all explicit css layout files and js feature modules to guarantee synchronization
 const CACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/css/themes.css',
+  '/css/app.css',
+  '/js/data.js',
+  '/js/library.js',
+  '/js/detail.js',
+  '/js/form.js',
+  '/js/parser.js',
+  '/js/nutrition.js',
+  '/js/planner.js',
+  '/js/shopping.js',
+  '/js/settings.js',
+  '/js/app.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  // Google Fonts — cached on first load
 ];
 
 // ── INSTALL: pre-cache app shell ──────────────────────────────────────────────
