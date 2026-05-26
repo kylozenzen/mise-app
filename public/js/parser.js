@@ -1,5 +1,5 @@
 // ── parser.js ────────────────────────────────────────────────────────────────
-// Paste text parser + URL import via Netlify function
+// Paste text parser + URL import via Netlify function with JSON-LD Structured Data support
 
 const FETCH_RECIPE_URL = '/.netlify/functions/fetch-recipe';
 let urlParsedData = null;
@@ -30,6 +30,12 @@ function parseRecipe() {
 }
 
 function runParser(text) {
+  // First attempt to parse via JSON-LD in case HTML string content was pasted directly
+  if (text.includes('application/ld+json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
+    const structuralResult = parseStructuredHTML(text);
+    if (structuralResult) return structuralResult;
+  }
+
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const UNITS = ['cup','cups','tbsp','tsp','tablespoon','tablespoons','teaspoon','teaspoons',
     'oz','ounce','ounces','lb','lbs','pound','pounds','g','gram','grams','kg','ml','liter','liters',
@@ -107,6 +113,139 @@ function looksLikeStep(line) {
   return false;
 }
 
+// ── STRUCTURED DATA ENGINE (JSON-LD) ─────────────────────────────────────────
+function parseStructuredHTML(htmlString) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    
+    for (const script of scripts) {
+      try {
+        const rawJson = JSON.parse(script.textContent);
+        const recipeNode = findRecipeNode(rawJson);
+        if (recipeNode) {
+          return normalizeRecipeNode(recipeNode);
+        }
+      } catch (e) {
+        // Continue iterating if single script node is malformed JSON
+      }
+    }
+  } catch (err) {
+    console.error("DOM Parsing error on schema search", err);
+  }
+  return null;
+}
+
+function findRecipeNode(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  if (obj['@type'] === 'Recipe' || (Array.isArray(obj['@type']) && obj['@type'].includes('Recipe'))) return obj;
+  
+  if (Array.isArray(obj)) {
+    for (const element of obj) {
+      const matched = findRecipeNode(element);
+      if (matched) return matched;
+    }
+  } else {
+    if (obj['@graph'] && Array.isArray(obj['@graph'])) {
+      return findRecipeNode(obj['@graph']);
+    }
+    for (const key in obj) {
+      if (typeof obj[key] === 'object') {
+        const matched = findRecipeNode(obj[key]);
+        if (matched) return matched;
+      }
+    }
+  }
+  return null;
+}
+
+function normalizeRecipeNode(node) {
+  // Title Sanitization
+  const title = node.name ? node.name.replace(/&amp;/g, '&').trim() : 'Untitled Schema Recipe';
+
+  // Servings Sanitization
+  let servings = 4;
+  if (node.recipeYield) {
+    const match = String(node.recipeYield).match(/\d+/);
+    if (match) servings = parseInt(match[0]);
+  }
+
+  // Ingredients Structuring
+  const rawIngredients = node.recipeIngredient || node.ingredients || [];
+  const ingredients = rawIngredients.map(ing => {
+    let clean = String(ing).replace(/\s+/g, ' ').trim();
+    // Use fallback regex parsing logic blocks to extract structure from clean string tokens
+    return extractIngredientFields(clean);
+  }).filter(ing => ing.name.length > 0);
+
+  // Steps Normalization (Resolves differences between flat strings, text nodes, and instruction components)
+  let steps = [];
+  const rawInstructions = node.recipeInstructions || node.instructions || [];
+  
+  if (typeof rawInstructions === 'string') {
+    steps = rawInstructions.split('\n').map(s => s.trim()).filter(s => s.length > 5);
+  } else if (Array.isArray(rawInstructions)) {
+    const extractSteps = (arr) => {
+      arr.forEach(item => {
+        if (typeof item === 'string') {
+          if (item.trim().length > 0) steps.push(item.trim());
+        } else if (item && typeof item === 'object') {
+          if (item['@type'] === 'HowToStep' && item.text) {
+            steps.push(item.text.trim());
+          } else if (item.itemListElement && Array.isArray(item.itemListElement)) {
+            extractSteps(item.itemListElement);
+          } else if (item.text) {
+            steps.push(item.text.trim());
+          }
+        }
+      });
+    };
+    extractSteps(rawInstructions);
+  }
+
+  // Embedded Macro / Nutrition mapping
+  const macros = { cal: 0, protein: 0, carbs: 0, fat: 0 };
+  if (node.nutrition && typeof node.nutrition === 'object') {
+    const nut = node.nutrition;
+    if (nut.calories) macros.cal = parseInt(String(nut.calories).replace(/[^\d]/g, '')) || 0;
+    if (nut.proteinContent) macros.protein = parseInt(String(nut.proteinContent).replace(/[^\d]/g, '')) || 0;
+    if (nut.carbohydrateContent) macros.carbs = parseInt(String(nut.carbohydrateContent).replace(/[^\d]/g, '')) || 0;
+    if (nut.fatContent) macros.fat = parseInt(String(nut.fatContent).replace(/[^\d]/g, '')) || 0;
+  }
+
+  return { title, servings, ingredients, steps, macros, source: 'schema.org' };
+}
+
+function extractIngredientFields(rawText) {
+  const UNITS = ['cup','cups','tbsp','tsp','tablespoon','tablespoons','teaspoon','teaspoons',
+    'oz','ounce','ounces','lb','lbs','pound','pounds','g','gram','grams','kg','ml','liter','liters',
+    'clove','cloves','slice','slices','bunch','can','cans','package','pkg','piece','pieces',
+    'handful','pinch','dash','splash','sprig','sprigs'];
+  const FRACS = {'½':0.5,'¼':0.25,'¾':0.75,'⅓':0.333,'⅔':0.667,'⅛':0.125,'⅜':0.375,'⅝':0.625,'⅞':0.875};
+
+  let clean = rawText.replace(/^[-•*·]\s*/, '');
+  let amount = '', unit = '';
+
+  const fm = clean.match(/^([½¼¾⅓⅔⅛⅜⅝⅞])\s*/);
+  if (fm) { amount = String(FRACS[fm[1]] || 0); clean = clean.slice(fm[0].length); }
+  
+  const nm = clean.match(/^(\d+(?:[\/\.]\d+)?(?:\s*[½¼¾⅓⅔⅛⅜⅝⅞])?)\s*/);
+  if (nm) {
+    const ns = nm[1];
+    if (ns.includes('/')) { const p = ns.split('/'); amount = String(parseFloat(p[0]) / parseFloat(p[1])); }
+    else amount = String(parseFloat(amount || 0) + parseFloat(ns));
+    clean = clean.slice(nm[0].length);
+  }
+  
+  const ur = new RegExp(`^(${UNITS.join('|')})\\.?\\s*`, 'i');
+  const um = clean.match(ur);
+  if (um) { unit = um[1].toLowerCase(); clean = clean.slice(um[0].length); }
+  const name = clean.replace(/,.*$/, '').trim();
+
+  return { amount, unit, name };
+}
+
 // ── URL IMPORT ───────────────────────────────────────────────────────────────
 async function fetchFromUrl() {
   const url = document.getElementById('url-input').value.trim();
@@ -121,12 +260,32 @@ async function fetchFromUrl() {
   try {
     const res  = await fetch(FETCH_RECIPE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
     const data = await res.json();
+    
     if (!res.ok) { setUrlStatus('error', data.error || 'Something went wrong. Try Paste Text instead.'); return; }
-    urlParsedData = data;
-    parsedData    = data;
-    showUrlPreview(data, url);
-    setUrlStatus('success', `Found: ${data.source === 'schema.org' ? 'Full recipe data extracted ✓' : 'Recipe detected (review before saving)'}`);
-  } catch {
+    
+    // Check if response contains direct raw html fallback to scrub client-side structured elements
+    let normalizedData = data;
+    if (typeof data === 'object' && data.html) {
+      const parsedHtmlResult = parseStructuredHTML(data.html);
+      if (parsedHtmlResult) normalizedData = parsedHtmlResult;
+    } else if (typeof data === 'string') {
+      const parsedHtmlResult = parseStructuredHTML(data);
+      if (parsedHtmlResult) normalizedData = parsedHtmlResult;
+    }
+
+    // Fall back to original loose regex structural parse runner if schema engine missed layout targets
+    if (!normalizedData.ingredients || normalizedData.ingredients.length === 0) {
+      if (typeof data.html === 'string') {
+        const doc = new DOMParser().parseFromString(data.html, 'text/html');
+        normalizedData = runParser(doc.body.innerText || '');
+      }
+    }
+
+    urlParsedData = normalizedData;
+    parsedData    = normalizedData;
+    showUrlPreview(normalizedData, url);
+    setUrlStatus('success', `Found: ${normalizedData.source === 'schema.org' ? 'Full recipe data extracted ✓' : 'Recipe detected (review before saving)'}`);
+  } catch (err) {
     setUrlStatus('error', window.location.protocol === 'file:' ? 'URL import requires Netlify deployment. Use Paste Text for now.' : 'Could not reach the import service. Check your connection.');
   } finally {
     document.getElementById('url-fetch-btn').disabled = false;
@@ -155,7 +314,7 @@ function showUrlPreview(data, sourceUrl) {
       <span>${ingCount} ingredient${ingCount !== 1 ? 's' : ''}</span>
       <span>${stepCount} step${stepCount !== 1 ? 's' : ''}</span>
       ${data.servings ? `<span>${data.servings} servings</span>` : ''}
-      ${hasMacros ? `<span>${data.macros.cal} cal</span>` : ''}
+      ${hasMacros ? `<span>${data.macros.cal || data.macros.calories || 0} cal</span>` : ''}
     </div>`;
   document.getElementById('url-parse-preview').classList.add('visible');
 }
