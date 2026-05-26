@@ -101,29 +101,50 @@ renderLibrary();
 obCheck();
 initViewportHandler();
 
-// ── NEW: INTERCEPT QUICK-SHARE DEEP LINKS ────────────────────────────────────
-(function checkIncomingShares() {
+// ── NEW OPTION B INTERCEPT ROUTER ENGINE ──────────────────────────────────────
+(async function interceptSharedLinks() {
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('shared') === '1' && urlParams.get('data')) {
-    try {
-      // Unpack base64 compression parameters
-      const decodedData = decodeURIComponent(atob(urlParams.get('data')));
-      const sharedRecipe = JSON.parse(decodedData);
-      
-      // Enforce unique temporary runtime namespace identifier tag
-      sharedRecipe.id = 'shared-' + Date.now();
+  const blobShortId = urlParams.get('id');
+  const fallbackRawData = urlParams.get('data');
+
+  // Guard execution paths if no link identifiers are present
+  if (!blobShortId && !fallbackRawData) return;
+
+  try {
+    let targetRecipe = null;
+
+    // A. Handle standard cloud blob lookups natively
+    if (blobShortId) {
+      showToast('Opening shared recipe… 🍳');
+      const res = await fetch(`/.netlify/functions/share-store?id=${blobShortId}`);
+      if (!res.ok) throw new Error('Shared file could not be read from cloud bucket storage');
+      targetRecipe = await res.json();
+    } 
+    // B. Revert safely to local client-side base64 strings if using legacy strings
+    else if (fallbackRawData) {
+      const decoded = decodeURIComponent(atob(fallbackRawData));
+      targetRecipe = JSON.parse(decoded);
+    }
+
+    if (targetRecipe) {
+      targetRecipe.id = 'shared-' + (blobShortId || Date.now());
       
       setTimeout(() => {
-        // Scrape address parameters away so page reloads don't loop the user
+        // Scrub active address variables away cleanly so browser updates don't lock loop
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Push object schema straight to detail engine
-        renderRecipeDetail(sharedRecipe);
-      }, 150);
-      
-    } catch (err) {
-      console.error("Deep link unpacking crash:", err);
-      showToast("Could not parse shared recipe payload link.");
+        // Suppress onboarding modals if a shared file entry link was triggered
+        const onboardingNode = document.getElementById('onboarding');
+        if (onboardingNode) onboardingNode.classList.add('hidden');
+
+        if (typeof renderRecipeDetail === 'function') {
+          renderRecipeDetail(targetRecipe);
+        }
+      }, 250);
     }
+
+  } catch (err) {
+    console.error("Shared system loading error:", err);
+    showToast("Mise couldn't open this shared link.");
   }
 })();
