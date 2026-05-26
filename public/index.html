@@ -23,10 +23,8 @@
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<!-- ======== ONBOARDING ======== -->
 <div id="onboarding">
   <div class="ob-slides">
-    <!-- SLIDE 1 -->
     <div class="ob-slide active" id="ob-slide-0">
       <div class="ob-icon">🍳</div>
       <div class="ob-wordmark">Mise<span>.</span></div>
@@ -55,7 +53,6 @@
         </div>
       </div>
     </div>
-    <!-- SLIDE 2 -->
     <div class="ob-slide" id="ob-slide-1">
       <div class="ob-icon">✂️</div>
       <div class="ob-headline">Paste. Parse.<br>Done.</div>
@@ -90,7 +87,6 @@
 
 <div id="app">
 
-  <!-- ======== VIEW: LIBRARY ======== -->
   <div id="view-library" class="view active">
     <div class="top-bar">
       <h1>Mise<span>.</span></h1>
@@ -121,7 +117,6 @@
     </div>
   </div>
 
-  <!-- ======== VIEW: DETAIL ======== -->
   <div id="view-detail" class="view">
     <div class="top-bar">
       <button class="icon-btn" onclick="goBack()">
@@ -139,19 +134,15 @@
     <div class="scroll-area" id="detail-content"></div>
   </div>
 
-  <!-- ======== VIEW: PLANNER ======== -->
   <div id="view-planner" class="view">
     <div class="planner-nav">
       <h1 style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--cream)">Plan<span style="color:var(--amber)">.</span></h1>
       <span class="planner-week-label" id="planner-week-label"></span>
     </div>
-    <!-- WEEK STRIP -->
     <div class="week-strip" id="week-strip"></div>
-    <!-- DAY SCROLL -->
     <div class="day-view" id="day-view"></div>
   </div>
 
-  <!-- ======== MEAL PICKER SHEET ======== -->
   <div class="sheet-overlay" id="picker-sheet-overlay" onclick="handleOverlayClick(event,'picker-sheet-overlay')">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -164,13 +155,11 @@
         </button>
       </div>
       <div class="sheet-body">
-        <!-- SEARCH RECIPES -->
         <div class="picker-search">
           <input type="text" class="search-input" id="picker-search-input" placeholder="Search your recipes…" oninput="filterPickerRecipes(this.value)">
         </div>
         <div class="picker-recipe-list" id="picker-recipe-list"></div>
 
-        <!-- QUICK ADD -->
         <div class="quick-add-section">
           <div class="quick-add-label">Or add a quick meal</div>
           <div class="field-group">
@@ -189,7 +178,6 @@
     </div>
   </div>
 
-  <!-- ======== SETTINGS SHEET ======== -->
   <div class="sheet-overlay" id="settings-sheet-overlay" onclick="handleOverlayClick(event,'settings-sheet-overlay')">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -203,7 +191,6 @@
       </div>
       <div class="sheet-body">
 
-        <!-- THEMES -->
         <div class="settings-section">
           <div class="settings-section-title">Theme</div>
           <div class="settings-card">
@@ -256,20 +243,19 @@
                 </div>
                 <div class="theme-swatch-name">Spice</div>
               </div>
-              <div class="theme-swatch" data-theme="volt" onclick="setTheme('volt')" style="border-color:#2a3000">
+              <div class="theme-swatch" data-theme="volt" onclick="setTheme('volt')">
                 <div class="theme-swatch-dots">
                   <div class="theme-swatch-dot" style="background:#000000"></div>
-                  <div class="theme-swatch-dot" style="background:#e8ff00;box-shadow:0 0 6px rgba(232,255,0,0.6)"></div>
+                  <div class="theme-swatch-dot" style="background:#e8ff00"></div>
                   <div class="theme-swatch-dot" style="background:#f0f0f0"></div>
                 </div>
-                <div class="theme-swatch-name">Volt ⚡</div>
+                <div class="theme-swatch-name">Volt</div>
               </div>
             </div>
             <div style="padding:0 14px 12px;font-size:11px;color:var(--text-muted);text-align:center">Tap any theme to apply instantly</div>
           </div>
         </div>
 
-        <!-- APP INFO -->
         <div class="settings-section">
           <div class="settings-section-title">About</div>
           <div class="settings-card">
@@ -294,7 +280,6 @@
           </div>
         </div>
 
-        <!-- DATA -->
         <div class="settings-section">
           <div class="settings-section-title">Data</div>
           <div class="settings-card">
@@ -310,7 +295,6 @@
           </div>
         </div>
 
-        <!-- DANGER ZONE -->
         <div class="settings-section">
           <div class="settings-section-title">Danger Zone</div>
           <button class="settings-danger-btn" onclick="clearAllData()">Clear All Data</button>
@@ -321,7 +305,6 @@
     </div>
   </div>
 
-  <!-- ======== ADD TO PLAN SHEET ======== -->
   <div class="sheet-overlay" id="add-to-plan-overlay" onclick="handleOverlayClick(event,'add-to-plan-overlay')">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -351,7 +334,6 @@
     </button>
   </nav>
 
-  <!-- ======== ADD SHEET ======== -->
   <div class="sheet-overlay" id="add-sheet-overlay" onclick="handleOverlayClick(event, 'add-sheet-overlay')">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -365,14 +347,12 @@
       </div>
       <div class="sheet-body">
 
-        <!-- METHOD TABS -->
         <div class="method-tabs">
           <button class="method-tab active" onclick="switchMethod('paste')">Paste Text</button>
           <button class="method-tab" onclick="switchMethod('url')">From URL</button>
           <button class="method-tab" onclick="switchMethod('form')">Build Form</button>
         </div>
 
-        <!-- ===== URL METHOD ===== -->
         <div id="method-url" style="display:none">
           <div class="field-group">
             <label>Recipe URL</label>
@@ -383,7 +363,6 @@
             Fetch Recipe →
           </button>
 
-          <!-- URL PARSE PREVIEW -->
           <div class="parse-preview" id="url-parse-preview">
             <h4>Imported from Web</h4>
             <div id="url-preview-content"></div>
@@ -401,7 +380,6 @@
           </div>
         </div>
 
-        <!-- ===== PASTE METHOD ===== -->
         <div id="method-paste">
           <div class="field-group">
             <label>Paste recipe text</label>
@@ -409,7 +387,6 @@
           </div>
           <button class="btn-secondary" onclick="parseRecipe()" style="margin-bottom:16px">Parse Recipe →</button>
 
-          <!-- PARSE PREVIEW -->
           <div class="parse-preview" id="parse-preview">
             <h4>Parsed Result</h4>
             <div id="parse-preview-content"></div>
@@ -418,10 +395,8 @@
           </div>
         </div>
 
-        <!-- ===== FORM METHOD ===== -->
         <div id="method-form" style="display:none">
 
-          <!-- EMOJI PICKER -->
           <div class="field-group">
             <label>Icon</label>
             <div class="emoji-row" id="emoji-row">
@@ -448,7 +423,6 @@
             <input type="number" id="f-servings" placeholder="4" min="1" max="99" style="width:100px">
           </div>
 
-          <!-- TAGS -->
           <div class="field-group">
             <label>Tags</label>
             <div class="tags-wrap" id="tags-wrap" onclick="document.getElementById('tag-input').focus()">
@@ -456,21 +430,18 @@
             </div>
           </div>
 
-          <!-- INGREDIENTS -->
           <div class="field-group">
             <label>Ingredients</label>
             <div id="ingredient-rows"></div>
             <button class="add-row-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
           </div>
 
-          <!-- STEPS -->
           <div class="field-group">
             <label>Steps</label>
             <div id="step-rows"></div>
             <button class="add-row-btn" onclick="addStepRow()">+ Add Step</button>
           </div>
 
-          <!-- MACROS TOGGLE -->
           <div class="field-group">
             <input type="checkbox" id="macros-toggle" onchange="toggleMacros(this.checked)">
             <label for="macros-toggle" class="section-toggle">
@@ -479,7 +450,6 @@
             </label>
 
             <div id="macros-section" style="display:none">
-              <!-- NUTRITION LOOKUP -->
               <div style="margin-bottom:14px">
                 <div style="position:relative">
                   <input type="text" id="nutrition-search" placeholder="Search ingredient to fill macros…"
@@ -513,8 +483,7 @@
                   <input type="number" id="f-fat" placeholder="8">
                 </div>
               </div>
-            </div><!-- end macros-section -->
-          </div>
+            </div></div>
 
           <button class="btn-primary" onclick="saveFormRecipe()">Save Recipe</button>
         </div>
@@ -523,7 +492,6 @@
     </div>
   </div>
 
-  <!-- ======== SHOPPING LIST SHEET ======== -->
   <div class="sheet-overlay" id="shopping-sheet-overlay" onclick="handleOverlayClick(event,'shopping-sheet-overlay')">
     <div class="sheet">
       <div class="sheet-handle"></div>
@@ -539,13 +507,10 @@
     </div>
   </div>
 
-  <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
 </div>
 
-
-<!-- JS modules — order matters: data first, app last -->
 <script src="/js/data.js"></script>
 <script src="/js/library.js"></script>
 <script src="/js/detail.js"></script>
