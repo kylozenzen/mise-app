@@ -3,6 +3,11 @@
 
 let currentRecipe = null;
 
+// ALIAS FOR BACKWARD COMPATIBILITY WITH LIBRARY.JS CLICK HANDLERS
+function openDetail(id) {
+  renderRecipeDetail(id);
+}
+
 function renderRecipeDetail(recipeOrId) {
   let recipe = null;
 
@@ -49,7 +54,7 @@ function renderRecipeDetail(recipeOrId) {
   if (editButton) {
     editButton.style.display = isSharedView ? 'none' : 'block';
     editButton.onclick = () => {
-      if (typeof openEditForm === 'function') openEditForm(recipe.id);
+      if (typeof openEditSheet === 'function') openEditSheet(recipe.id);
     };
   }
 
@@ -73,27 +78,25 @@ function renderRecipeDetail(recipeOrId) {
       <div class="detail-meta-wrap">
         <h2 class="detail-title">${recipe.title || 'Untitled Recipe'}</h2>
         <div class="detail-tags">
-          ${(recipe.tags || []).map(t => `<span class="detail-tag">#${t}</span>`).join('')}
+          ${(recipe.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}
         </div>
       </div>
     </div>
 
-    <div class="detail-controls">
-      <div class="scaler-wrap">
-        <span class="scaler-label">Servings</span>
-        <div class="scaler">
-          <button onclick="scaleRecipe(-1)">−</button>
-          <span id="detail-servings">${recipe.servings || 4}</span>
-          <button onclick="scaleRecipe(1)">+</button>
-        </div>
+    <div class="detail-controls" style="display:flex;align-items:center;justify-content:between;margin:16px 20px;gap:12px">
+      <div class="servings-control" style="margin:0">
+        <span class="servings-label">Servings</span>
+        <button class="servings-btn" onclick="scaleRecipe(-1)">−</button>
+        <span class="servings-val" id="detail-servings">${recipe.servings || 4}</span>
+        <button class="servings-btn" onclick="scaleRecipe(1)">+</button>
       </div>
       
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="if(typeof openATPSheet === 'function') openATPSheet('${recipe.id}')" style="padding:0 14px;height:36px;font-size:12px" ${isSharedView ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="add-to-plan-btn" onclick="if(typeof openATPSheet === 'function') openATPSheet('${recipe.id}')" style="padding:0 14px;height:44px;font-size:13px;margin:0" ${isSharedView ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
           📅 Plan
         </button>
-        <button class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="border:1px solid var(--border);background:var(--surface2);width:36px;height:36px;display:flex;align-items:center;justify-content:center">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px">
+        <button class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="width:44px;height:44px;border:1px solid var(--border)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
@@ -104,29 +107,52 @@ function renderRecipeDetail(recipeOrId) {
 
   if (hasMacros) {
     html += `
-      <div class="detail-macros-card">
-        <div class="detail-macro"><span class="detail-macro-val" id="m-cal">${recipe.macros.cal || 0}</span><span class="detail-macro-lbl">Calories</span></div>
-        <div class="detail-macro"><span class="detail-macro-val" id="m-protein">${recipe.macros.protein || 0}g</span><span class="detail-macro-lbl">Protein</span></div>
-        <div class="detail-macro"><span class="detail-macro-val" id="m-carbs">${recipe.macros.carbs || 0}g</span><span class="detail-macro-lbl">Carbs</span></div>
-        <div class="detail-macro"><span class="detail-macro-val" id="m-fat">${recipe.macros.fat || 0}g</span><span class="detail-macro-lbl">Fat</span></div>
+      <div class="detail-section">
+        <div class="section-label">Macros · per serving</div>
+        <div class="macros-strip">
+          <div class="macro-pill"><span class="macro-pill-val" id="m-cal">${recipe.macros.cal || 0}</span><span class="macro-pill-label">Calories</span></div>
+          <div class="macro-pill"><span class="macro-pill-val" id="m-protein">${recipe.macros.protein || 0}g</span><span class="macro-pill-label">Protein</span></div>
+          <div class="macro-pill"><span class="macro-pill-val" id="m-carbs">${recipe.macros.carbs || 0}g</span><span class="macro-pill-label">Carbs</span></div>
+          <div class="macro-pill"><span class="macro-pill-val" id="m-fat">${recipe.macros.fat || 0}g</span><span class="macro-pill-label">Fat</span></div>
+        </div>
       </div>
     `;
   }
 
   // Ingredients with inline list completion toggle class bindings
-  html += `<div class="detail-section-title">Ingredients</div><ul class="detail-ingredients">`;
-  (recipe.ingredients || []).forEach((ing) => {
-    const amtStr = ing.amount ? `<span class="ing-amt" data-base="${ing.amount}">${formatAmount(parseFloat(ing.amount))}</span> ` : '';
-    const unitStr = ing.unit ? `<span class="ing-unit">${ing.unit}</span> ` : '';
-    html += `<li onclick="this.classList.toggle('strike-completed')">${amtStr}${unitStr}<span class="ing-name">${ing.name}</span></li>`;
-  });
-  html += `</ul>`;
+  if (recipe.ingredients && recipe.ingredients.length) {
+    html += `<div class="detail-section"><div class="section-label">Ingredients</div>`;
+    recipe.ingredients.forEach((ing) => {
+      const amtStr = ing.amount ? `<span class="ing-amount" data-base="${ing.amount}">${formatAmount(parseFloat(ing.amount))}</span> ` : '';
+      const unitStr = ing.unit ? `<span class="ing-unit" style="color:var(--amber-bright);font-family:'DM Mono',monospace;font-size:13px">${ing.unit}</span> ` : '';
+      html += `
+        <div class="ingredient-list-item" onclick="this.classList.toggle('strike-completed')" style="user-select:none">
+          ${amtStr}${unitStr}
+          <span class="ing-name" style="text-align:right">${ing.name}</span>
+        </div>`;
+    });
+    html += `</div>`;
+  }
 
-  html += `<div class="detail-section-title">Steps</div><ol class="detail-steps">`;
-  (recipe.steps || []).forEach(step => {
-    html += `<li onclick="this.classList.toggle('strike-completed')">${step}</li>`;
-  });
-  html += `</ol>`;
+  // Method steps rendering pass
+  if (recipe.steps && recipe.steps.length) {
+    html += `<div class="detail-section"><div class="section-label">Method</div>`;
+    recipe.steps.forEach((step, i) => {
+      html += `
+        <div class="step-item" onclick="this.classList.toggle('strike-completed')" style="user-select:none">
+          <div class="step-item-num">${i + 1}</div>
+          <div class="step-item-text">${step}</div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Footer cleanup control array action rows
+  html += `
+    <div class="detail-actions">
+      <button class="action-btn danger" onclick="deleteRecipe('${recipe.id}')" ${isSharedView ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>Delete Recipe</button>
+    </div>
+  `;
 
   container.innerHTML = html;
 }
@@ -143,7 +169,7 @@ function scaleRecipe(dir) {
   const factor = next / base;
 
   // Scale embedded visual quantity fields instantly inside active DOM list elements
-  document.querySelectorAll('.ing-amt').forEach(span => {
+  document.querySelectorAll('.ing-amount').forEach(span => {
     const baseAmt = parseFloat(span.dataset.base);
     if (!isNaN(baseAmt)) {
       span.textContent = formatAmount(baseAmt * factor);
@@ -210,4 +236,14 @@ function saveSharedToLibrary() {
   
   switchView('library');
   if (typeof renderLibrary === 'function') renderLibrary();
+}
+
+function deleteRecipe(id) {
+  if (!confirm('Delete this recipe?')) return;
+  if (typeof recipes !== 'undefined' && Array.isArray(recipes)) {
+    recipes = recipes.filter(r => r.id !== id);
+    if (typeof save === 'function') save();
+  }
+  goBack();
+  showToast('Recipe deleted');
 }
