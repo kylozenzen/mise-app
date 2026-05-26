@@ -62,7 +62,8 @@ const THEME_COLORS = {
   volt:     '#000000',
 };
 
-function setTheme(name) {
+// Added showNotification flag defaulting to true for explicit user switch interactions
+function setTheme(name, showNotification = true) {
   document.documentElement.setAttribute('data-theme', name);
   localStorage.setItem('mise_theme', name);
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEME_COLORS[name] || '#0f0d09');
@@ -77,11 +78,15 @@ function setTheme(name) {
     }
   });
 
-  showToast(`${name.charAt(0).toUpperCase() + name.slice(1)} theme applied`);
+  // Only dispatch standard feedback alert if true
+  if (showNotification) {
+    showToast(`${name.charAt(0).toUpperCase() + name.slice(1)} theme applied`);
+  }
 }
 
 function loadTheme() {
-  setTheme(localStorage.getItem('mise_theme') || 'ember');
+  // Pass false here to guarantee a silent bootstrap injection sequence on boot
+  setTheme(localStorage.getItem('mise_theme') || 'ember', false);
 }
 
 // ── DATA ─────────────────────────────────────────────────────────────────────
