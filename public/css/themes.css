@@ -1,0 +1,234 @@
+/* ── BASE TOKENS ── */
+:root {
+  --radius: 12px;
+  --radius-sm: 8px;
+  --nav-h: 64px;
+  --header-h: 56px;
+  --red: #c84040;
+  --green: #4a8c5c;
+  --bg: #0f0d09;
+  --surface: #1c1912;
+  --surface2: #252118;
+  --surface3: #2e2a1e;
+  --border: #3a3526;
+  --border-light: #4a4535;
+  --cream: #e8dfc8;
+  --cream-dim: #a89f88;
+  --cream-muted: #6a6358;
+  --amber: #c8841a;
+  --amber-bright: #e09a28;
+  --amber-dim: #6b4710;
+  --text: #e8dfc8;
+  --text-dim: #a89f88;
+  --text-muted: #6a6358;
+}
+
+[data-theme="ember"] {
+  --bg: #0f0d09; --surface: #1c1912; --surface2: #252118; --surface3: #2e2a1e;
+  --border: #3a3526; --border-light: #4a4535;
+  --cream: #e8dfc8; --cream-dim: #a89f88; --cream-muted: #6a6358;
+  --amber: #c8841a; --amber-bright: #e09a28; --amber-dim: #6b4710;
+  --text: #e8dfc8; --text-dim: #a89f88; --text-muted: #6a6358;
+}
+
+[data-theme="midnight"] {
+  --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235; --surface3: #202c42;
+  --border: #2a3a55; --border-light: #374d6e;
+  --cream: #c9d8f0; --cream-dim: #8fa3c0; --cream-muted: #4a607a;
+  --amber: #4a90e2; --amber-bright: #6aaff5; --amber-dim: #1e3a6e;
+  --text: #c9d8f0; --text-dim: #8fa3c0; --text-muted: #4a607a;
+}
+
+[data-theme="garden"] {
+  --bg: #f5f2eb; --surface: #edeae0; --surface2: #e4e0d4; --surface3: #dad5c6;
+  --border: #c8c2ae; --border-light: #b8b199;
+  --cream: #1e2e1e; --cream-dim: #3a4e3a; --cream-muted: #7a8e7a;
+  --amber: #2d6a4f; --amber-bright: #40916c; --amber-dim: #b7d7c8;
+  --text: #1e2e1e; --text-dim: #3a5a3a; --text-muted: #7a8e7a;
+}
+
+[data-theme="dusk"] {
+  --bg: #12091e; --surface: #1c1130; --surface2: #251840; --surface3: #2e1f50;
+  --border: #3d2a6a; --border-light: #52388a;
+  --cream: #e0d0f8; --cream-dim: #b09ad8; --cream-muted: #6a5490;
+  --amber: #c77dff; --amber-bright: #e0aaff; --amber-dim: #5a2d8a;
+  --text: #e0d0f8; --text-dim: #b09ad8; --text-muted: #6a5490;
+}
+
+[data-theme="flame"] {
+  --bg: #0a0a0a; --surface: #141414; --surface2: #1c1c1c; --surface3: #242424;
+  --border: #333333; --border-light: #444444;
+  --cream: #f5f0e8; --cream-dim: #b8b0a0; --cream-muted: #666055;
+  --amber: #ff6b35; --amber-bright: #ff8c5a; --amber-dim: #7a2a10;
+  --text: #f5f0e8; --text-dim: #b8b0a0; --text-muted: #666055;
+}
+
+[data-theme="spice"] {
+  --bg: #f7efe4; --surface: #efe5d6; --surface2: #e5d8c4; --surface3: #d9c9ae;
+  --border: #c4ae92; --border-light: #b89e80;
+  --cream: #2c1810; --cream-dim: #5a3520; --cream-muted: #8a6548;
+  --amber: #b5451b; --amber-bright: #d4581e; --amber-dim: #f0c8b0;
+  --text: #2c1810; --text-dim: #5a3520; --text-muted: #8a6548;
+}
+
+/* Light theme adjustments */
+[data-theme="garden"] body::before,
+[data-theme="spice"] body::before { opacity: 0.25; }
+[data-theme="garden"] .ob-feature,
+[data-theme="spice"] .ob-feature { background: var(--surface2); border-color: var(--border); }
+[data-theme="garden"] .parse-preview,
+[data-theme="spice"] .parse-preview { background: var(--surface2); }
+[data-theme="garden"] .sheet,
+[data-theme="spice"] .sheet { background: var(--surface); }
+[data-theme="garden"] #bottom-nav,
+[data-theme="spice"] #bottom-nav { background: var(--surface); border-color: var(--border); }
+
+/* ── VOLT ── */
+[data-theme="volt"] {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #111111;
+  --surface3: #1a1a1a;
+  --border: #222222;
+  --border-light: #333333;
+  --cream: #f0f0f0;
+  --cream-dim: #888888;
+  --cream-muted: #444444;
+  --amber: #e8ff00;
+  --amber-bright: #f5ff4d;
+  --amber-dim: #2a3000;
+  --text: #f0f0f0;
+  --text-dim: #888888;
+  --text-muted: #444444;
+  --radius: 0px;
+  --radius-sm: 0px;
+}
+
+/* Volt-specific overrides */
+[data-theme="volt"] body::before {
+  background-image: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px
+  );
+  opacity: 1;
+}
+
+[data-theme="volt"] .top-bar,
+[data-theme="volt"] .planner-nav {
+  border-bottom: 2px solid var(--amber);
+}
+
+[data-theme="volt"] #bottom-nav {
+  border-top: 2px solid var(--amber);
+  background: var(--bg);
+}
+
+[data-theme="volt"] .nav-tab.active {
+  filter: drop-shadow(0 0 6px rgba(232,255,0,0.5));
+}
+
+[data-theme="volt"] .top-bar h1,
+[data-theme="volt"] .planner-nav h1 {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+[data-theme="volt"] .recipe-card {
+  border-radius: 0;
+  border: 1px solid var(--border);
+}
+
+[data-theme="volt"] .recipe-card:active {
+  border-color: var(--amber);
+  background: rgba(232,255,0,0.04);
+}
+
+[data-theme="volt"] .sheet {
+  border-radius: 0;
+  border-top: 2px solid var(--amber);
+}
+
+[data-theme="volt"] .tag-filter-chip.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #000;
+}
+
+[data-theme="volt"] .btn-primary {
+  border-radius: 0;
+  background: var(--amber);
+  color: #000;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+[data-theme="volt"] .btn-primary:active {
+  background: var(--amber-bright);
+}
+
+[data-theme="volt"] .btn-secondary {
+  border-radius: 0;
+  border-color: var(--border-light);
+}
+
+[data-theme="volt"] input,
+[data-theme="volt"] textarea,
+[data-theme="volt"] select {
+  border-radius: 0;
+  border-color: var(--border-light);
+  font-family: 'DM Mono', monospace;
+}
+
+[data-theme="volt"] input:focus,
+[data-theme="volt"] textarea:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 8px rgba(232,255,0,0.15);
+}
+
+[data-theme="volt"] .week-chip {
+  border-radius: 0;
+}
+
+[data-theme="volt"] .week-chip.active {
+  background: var(--amber-dim);
+  border-color: var(--amber);
+}
+
+[data-theme="volt"] .macro-pill,
+[data-theme="volt"] .daily-macro-bar,
+[data-theme="volt"] .weekly-summary,
+[data-theme="volt"] .meal-slot-card,
+[data-theme="volt"] .goals-panel,
+[data-theme="volt"] .parse-preview,
+[data-theme="volt"] .settings-card {
+  border-radius: 0;
+}
+
+[data-theme="volt"] .dmb-bar-fill {
+  background: var(--amber);
+}
+
+[data-theme="volt"] .section-label,
+[data-theme="volt"] .meal-slot-label,
+[data-theme="volt"] .ws-title {
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 2px;
+}
+
+[data-theme="volt"] .tag.macro {
+  background: var(--amber-dim);
+  color: var(--amber);
+}
+
+[data-theme="volt"] .icon-btn {
+  border-radius: 0;
+  border: 1px solid var(--border-light);
+}
+
+[data-theme="volt"] .icon-btn:active {
+  border-color: var(--amber);
+  color: var(--amber);
+}

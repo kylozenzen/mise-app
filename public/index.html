@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f0d09">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mise">
+<meta name="description" content="Save recipes, plan your week, track macros. Works offline.">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<title>Mise — Recipe Keeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/themes.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<!-- ======== ONBOARDING ======== -->
+<div id="onboarding">
+  <div class="ob-slides">
+    <!-- SLIDE 1 -->
+    <div class="ob-slide active" id="ob-slide-0">
+      <div class="ob-icon">🍳</div>
+      <div class="ob-wordmark">Mise<span>.</span></div>
+      <div class="ob-tagline">Your kitchen, organized</div>
+      <div class="ob-feature-list">
+        <div class="ob-feature">
+          <span class="ob-feature-icon">📋</span>
+          <div class="ob-feature-text">
+            <h4>Save any recipe</h4>
+            <p>Paste text from anywhere — blogs, messages, AllRecipes. Or build one from scratch.</p>
+          </div>
+        </div>
+        <div class="ob-feature">
+          <span class="ob-feature-icon">📅</span>
+          <div class="ob-feature-text">
+            <h4>Plan your week</h4>
+            <p>Slot meals into your weekly calendar and track macros automatically.</p>
+          </div>
+        </div>
+        <div class="ob-feature">
+          <span class="ob-feature-icon">📶</span>
+          <div class="ob-feature-text">
+            <h4>Works offline</h4>
+            <p>Everything lives on your device. No account. No internet required.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- SLIDE 2 -->
+    <div class="ob-slide" id="ob-slide-1">
+      <div class="ob-icon">✂️</div>
+      <div class="ob-headline">Paste. Parse.<br>Done.</div>
+      <div class="ob-body">Copy a recipe from anywhere and paste it in. Mise pulls out the title, ingredients, and steps automatically — then you confirm before saving.</div>
+      <div class="ob-feature-list" style="margin-top:20px">
+        <div class="ob-feature">
+          <span class="ob-feature-icon">🔢</span>
+          <div class="ob-feature-text">
+            <h4>Serving scaler</h4>
+            <p>Tap + or − on any recipe to scale ingredients up or down instantly.</p>
+          </div>
+        </div>
+        <div class="ob-feature">
+          <span class="ob-feature-icon">💪</span>
+          <div class="ob-feature-text">
+            <h4>Macro tracking</h4>
+            <p>Add calories, protein, carbs, and fat per serving. See daily totals in the Planner.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ob-footer">
+    <div class="ob-dots">
+      <div class="ob-dot active" id="ob-dot-0"></div>
+      <div class="ob-dot" id="ob-dot-1"></div>
+    </div>
+    <button class="ob-btn-primary" id="ob-next-btn" onclick="obNext()">Next →</button>
+    <button class="ob-btn-skip" onclick="obFinish()">Skip</button>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- ======== VIEW: LIBRARY ======== -->
+  <div id="view-library" class="view active">
+    <div class="top-bar">
+      <h1>Mise<span>.</span></h1>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="openShoppingSheet()" title="Shopping list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="openAddSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="openSettingsSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="search-input" placeholder="Search recipes…" oninput="filterRecipes(this.value)">
+      </div>
+      <div class="tag-filter-strip" id="tag-filter-strip"></div>
+      <div id="library-content"></div>
+    </div>
+  </div>
+
+  <!-- ======== VIEW: DETAIL ======== -->
+  <div id="view-detail" class="view">
+    <div class="top-bar">
+      <button class="icon-btn" onclick="goBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="detail-edit-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="scroll-area" id="detail-content"></div>
+  </div>
+
+  <!-- ======== VIEW: PLANNER ======== -->
+  <div id="view-planner" class="view">
+    <div class="planner-nav">
+      <h1 style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--cream)">Plan<span style="color:var(--amber)">.</span></h1>
+      <span class="planner-week-label" id="planner-week-label"></span>
+    </div>
+    <!-- WEEK STRIP -->
+    <div class="week-strip" id="week-strip"></div>
+    <!-- DAY SCROLL -->
+    <div class="day-view" id="day-view"></div>
+  </div>
+
+  <!-- ======== MEAL PICKER SHEET ======== -->
+  <div class="sheet-overlay" id="picker-sheet-overlay" onclick="handleOverlayClick(event,'picker-sheet-overlay')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title" id="picker-sheet-title">Add Meal</span>
+        <button class="icon-btn" onclick="closePickerSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <!-- SEARCH RECIPES -->
+        <div class="picker-search">
+          <input type="text" class="search-input" id="picker-search-input" placeholder="Search your recipes…" oninput="filterPickerRecipes(this.value)">
+        </div>
+        <div class="picker-recipe-list" id="picker-recipe-list"></div>
+
+        <!-- QUICK ADD -->
+        <div class="quick-add-section">
+          <div class="quick-add-label">Or add a quick meal</div>
+          <div class="field-group">
+            <label>Meal Name</label>
+            <input type="text" id="qa-name" placeholder="e.g. Protein shake">
+          </div>
+          <div class="macros-grid">
+            <div class="macro-field"><label>Calories</label><input type="number" id="qa-cal" placeholder="0"></div>
+            <div class="macro-field"><label>Protein (g)</label><input type="number" id="qa-protein" placeholder="0"></div>
+            <div class="macro-field"><label>Carbs (g)</label><input type="number" id="qa-carbs" placeholder="0"></div>
+            <div class="macro-field"><label>Fat (g)</label><input type="number" id="qa-fat" placeholder="0"></div>
+          </div>
+          <button class="btn-primary" onclick="addQuickMeal()" style="margin-top:12px">Add Meal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== SETTINGS SHEET ======== -->
+  <div class="sheet-overlay" id="settings-sheet-overlay" onclick="handleOverlayClick(event,'settings-sheet-overlay')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Settings</span>
+        <button class="icon-btn" onclick="closeSettingsSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+
+        <!-- THEMES -->
+        <div class="settings-section">
+          <div class="settings-section-title">Theme</div>
+          <div class="settings-card">
+            <div class="theme-grid">
+              <div class="theme-swatch active" data-theme="ember" onclick="setTheme('ember')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#0f0d09"></div>
+                  <div class="theme-swatch-dot" style="background:#c8841a"></div>
+                  <div class="theme-swatch-dot" style="background:#e8dfc8"></div>
+                </div>
+                <div class="theme-swatch-name">Ember ✓</div>
+              </div>
+              <div class="theme-swatch" data-theme="midnight" onclick="setTheme('midnight')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#0a0e1a"></div>
+                  <div class="theme-swatch-dot" style="background:#4a90e2"></div>
+                  <div class="theme-swatch-dot" style="background:#c9d8f0"></div>
+                </div>
+                <div class="theme-swatch-name">Midnight</div>
+              </div>
+              <div class="theme-swatch" data-theme="garden" onclick="setTheme('garden')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#f5f2eb"></div>
+                  <div class="theme-swatch-dot" style="background:#2d6a4f"></div>
+                  <div class="theme-swatch-dot" style="background:#1e2e1e"></div>
+                </div>
+                <div class="theme-swatch-name">Garden</div>
+              </div>
+              <div class="theme-swatch" data-theme="dusk" onclick="setTheme('dusk')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#12091e"></div>
+                  <div class="theme-swatch-dot" style="background:#c77dff"></div>
+                  <div class="theme-swatch-dot" style="background:#e0d0f8"></div>
+                </div>
+                <div class="theme-swatch-name">Dusk</div>
+              </div>
+              <div class="theme-swatch" data-theme="flame" onclick="setTheme('flame')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#0a0a0a"></div>
+                  <div class="theme-swatch-dot" style="background:#ff6b35"></div>
+                  <div class="theme-swatch-dot" style="background:#f5f0e8"></div>
+                </div>
+                <div class="theme-swatch-name">Flame</div>
+              </div>
+              <div class="theme-swatch" data-theme="spice" onclick="setTheme('spice')">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#f7efe4"></div>
+                  <div class="theme-swatch-dot" style="background:#b5451b"></div>
+                  <div class="theme-swatch-dot" style="background:#2c1810"></div>
+                </div>
+                <div class="theme-swatch-name">Spice</div>
+              </div>
+              <div class="theme-swatch" data-theme="volt" onclick="setTheme('volt')" style="border-color:#2a3000">
+                <div class="theme-swatch-dots">
+                  <div class="theme-swatch-dot" style="background:#000000"></div>
+                  <div class="theme-swatch-dot" style="background:#e8ff00;box-shadow:0 0 6px rgba(232,255,0,0.6)"></div>
+                  <div class="theme-swatch-dot" style="background:#f0f0f0"></div>
+                </div>
+                <div class="theme-swatch-name">Volt ⚡</div>
+              </div>
+            </div>
+            <div style="padding:0 14px 12px;font-size:11px;color:var(--text-muted);text-align:center">Tap any theme to apply instantly</div>
+          </div>
+        </div>
+
+        <!-- APP INFO -->
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+          <div class="settings-card">
+            <div class="settings-row" style="cursor:default">
+              <div class="settings-row-left">
+                <span class="settings-row-icon">🍳</span>
+                <div>
+                  <div class="settings-row-label">Mise</div>
+                  <div class="settings-row-sub">Version 1.0 · Nobody Studios</div>
+                </div>
+              </div>
+            </div>
+            <div class="settings-row" onclick="obReplay()" style="cursor:pointer">
+              <div class="settings-row-left">
+                <span class="settings-row-icon">👋</span>
+                <div><div class="settings-row-label">Show intro again</div></div>
+              </div>
+              <div class="settings-row-right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="settings-section">
+          <div class="settings-section-title">Data</div>
+          <div class="settings-card">
+            <div class="settings-row" onclick="exportData()">
+              <div class="settings-row-left">
+                <span class="settings-row-icon">📤</span>
+                <div><div class="settings-row-label">Export recipes</div><div class="settings-row-sub">Download as JSON</div></div>
+              </div>
+              <div class="settings-row-right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DANGER ZONE -->
+        <div class="settings-section">
+          <div class="settings-section-title">Danger Zone</div>
+          <button class="settings-danger-btn" onclick="clearAllData()">Clear All Data</button>
+        </div>
+
+        <div style="height:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== ADD TO PLAN SHEET ======== -->
+  <div class="sheet-overlay" id="add-to-plan-overlay" onclick="handleOverlayClick(event,'add-to-plan-overlay')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title" id="atp-sheet-title">Add to Plan</span>
+        <button class="icon-btn" onclick="closeATPSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="atp-sheet-body"></div>
+    </div>
+  </div>
+  <nav id="bottom-nav">
+    <button class="nav-tab active" id="tab-library" onclick="switchView('library')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      Recipes
+    </button>
+    <button class="nav-tab" id="tab-planner" onclick="switchView('planner')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Planner
+    </button>
+  </nav>
+
+  <!-- ======== ADD SHEET ======== -->
+  <div class="sheet-overlay" id="add-sheet-overlay" onclick="handleOverlayClick(event, 'add-sheet-overlay')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title" id="sheet-main-title">Add Recipe</span>
+        <button class="icon-btn" onclick="closeAddSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+
+        <!-- METHOD TABS -->
+        <div class="method-tabs">
+          <button class="method-tab active" onclick="switchMethod('paste')">Paste Text</button>
+          <button class="method-tab" onclick="switchMethod('url')">From URL</button>
+          <button class="method-tab" onclick="switchMethod('form')">Build Form</button>
+        </div>
+
+        <!-- ===== URL METHOD ===== -->
+        <div id="method-url" style="display:none">
+          <div class="field-group">
+            <label>Recipe URL</label>
+            <input type="text" id="url-input" placeholder="https://www.allrecipes.com/recipe/…" style="font-size:13px">
+          </div>
+          <div id="url-status" style="display:none;margin-bottom:12px"></div>
+          <button class="btn-secondary" id="url-fetch-btn" onclick="fetchFromUrl()" style="margin-bottom:16px">
+            Fetch Recipe →
+          </button>
+
+          <!-- URL PARSE PREVIEW -->
+          <div class="parse-preview" id="url-parse-preview">
+            <h4>Imported from Web</h4>
+            <div id="url-preview-content"></div>
+            <button class="btn-primary" onclick="confirmUrlImport()" style="margin-top:12px">Save This Recipe</button>
+            <button class="btn-secondary" onclick="switchMethod('form')">Edit in Form Instead</button>
+          </div>
+
+          <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Works great with</div>
+            <div style="font-size:12px;color:var(--cream-dim);line-height:1.8">
+              AllRecipes · Food Network · NYT Cooking<br>
+              Serious Eats · BBC Good Food · Bon Appétit<br>
+              <span style="color:var(--text-muted)">+ most major recipe sites</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PASTE METHOD ===== -->
+        <div id="method-paste">
+          <div class="field-group">
+            <label>Paste recipe text</label>
+            <textarea class="paste-area" id="paste-text" placeholder="Paste any recipe — from a blog, AllRecipes, a text message, anywhere. We'll figure it out.&#10;&#10;Works best with:&#10;• Ingredient lists with amounts&#10;• Numbered steps&#10;• A title at the top"></textarea>
+          </div>
+          <button class="btn-secondary" onclick="parseRecipe()" style="margin-bottom:16px">Parse Recipe →</button>
+
+          <!-- PARSE PREVIEW -->
+          <div class="parse-preview" id="parse-preview">
+            <h4>Parsed Result</h4>
+            <div id="parse-preview-content"></div>
+            <button class="btn-primary" onclick="confirmPaste()" style="margin-top:12px">Save This Recipe</button>
+            <button class="btn-secondary" onclick="switchMethod('form')">Edit in Form Instead</button>
+          </div>
+        </div>
+
+        <!-- ===== FORM METHOD ===== -->
+        <div id="method-form" style="display:none">
+
+          <!-- EMOJI PICKER -->
+          <div class="field-group">
+            <label>Icon</label>
+            <div class="emoji-row" id="emoji-row">
+              <div class="emoji-opt selected" data-emoji="🍳" onclick="selectEmoji(this)">🍳</div>
+              <div class="emoji-opt" data-emoji="🥗" onclick="selectEmoji(this)">🥗</div>
+              <div class="emoji-opt" data-emoji="🍜" onclick="selectEmoji(this)">🍜</div>
+              <div class="emoji-opt" data-emoji="🥩" onclick="selectEmoji(this)">🥩</div>
+              <div class="emoji-opt" data-emoji="🍲" onclick="selectEmoji(this)">🍲</div>
+              <div class="emoji-opt" data-emoji="🥘" onclick="selectEmoji(this)">🥘</div>
+              <div class="emoji-opt" data-emoji="🍱" onclick="selectEmoji(this)">🍱</div>
+              <div class="emoji-opt" data-emoji="🧁" onclick="selectEmoji(this)">🧁</div>
+              <div class="emoji-opt" data-emoji="🥙" onclick="selectEmoji(this)">🥙</div>
+              <div class="emoji-opt" data-emoji="🍛" onclick="selectEmoji(this)">🍛</div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Recipe Title</label>
+            <input type="text" id="f-title" placeholder="e.g. Chicken Tikka Masala">
+          </div>
+
+          <div class="field-group">
+            <label>Servings</label>
+            <input type="number" id="f-servings" placeholder="4" min="1" max="99" style="width:100px">
+          </div>
+
+          <!-- TAGS -->
+          <div class="field-group">
+            <label>Tags</label>
+            <div class="tags-wrap" id="tags-wrap" onclick="document.getElementById('tag-input').focus()">
+              <input type="text" class="tag-input-inline" id="tag-input" placeholder="Add tag, press Enter" onkeydown="handleTagInput(event)">
+            </div>
+          </div>
+
+          <!-- INGREDIENTS -->
+          <div class="field-group">
+            <label>Ingredients</label>
+            <div id="ingredient-rows"></div>
+            <button class="add-row-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+          </div>
+
+          <!-- STEPS -->
+          <div class="field-group">
+            <label>Steps</label>
+            <div id="step-rows"></div>
+            <button class="add-row-btn" onclick="addStepRow()">+ Add Step</button>
+          </div>
+
+          <!-- MACROS TOGGLE -->
+          <div class="field-group">
+            <input type="checkbox" id="macros-toggle" onchange="toggleMacros(this.checked)">
+            <label for="macros-toggle" class="section-toggle">
+              <div class="toggle-knob"></div>
+              <span class="toggle-label">Add Macros (per serving)</span>
+            </label>
+
+            <div id="macros-section" style="display:none">
+              <!-- NUTRITION LOOKUP -->
+              <div style="margin-bottom:14px">
+                <div style="position:relative">
+                  <input type="text" id="nutrition-search" placeholder="Search ingredient to fill macros…"
+                    oninput="nutritionSearch(this.value)"
+                    autocomplete="off"
+                    style="font-size:13px;padding-right:36px">
+                  <div id="nutrition-spinner" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%)">
+                    <div class="url-spinner"></div>
+                  </div>
+                </div>
+                <div id="nutrition-results" style="display:none"></div>
+                <div id="nutrition-credit" style="display:none;font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right">
+                  Data: USDA FoodData Central
+                </div>
+              </div>
+              <div class="macros-grid">
+                <div class="macro-field">
+                  <label>Calories</label>
+                  <input type="number" id="f-cal" placeholder="320">
+                </div>
+                <div class="macro-field">
+                  <label>Protein (g)</label>
+                  <input type="number" id="f-protein" placeholder="28">
+                </div>
+                <div class="macro-field">
+                  <label>Carbs (g)</label>
+                  <input type="number" id="f-carbs" placeholder="42">
+                </div>
+                <div class="macro-field">
+                  <label>Fat (g)</label>
+                  <input type="number" id="f-fat" placeholder="8">
+                </div>
+              </div>
+            </div><!-- end macros-section -->
+          </div>
+
+          <button class="btn-primary" onclick="saveFormRecipe()">Save Recipe</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== SHOPPING LIST SHEET ======== -->
+  <div class="sheet-overlay" id="shopping-sheet-overlay" onclick="handleOverlayClick(event,'shopping-sheet-overlay')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <span class="sheet-title">Shopping List</span>
+        <button class="icon-btn" onclick="closeShoppingSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="shopping-sheet-body"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+
+<!-- JS modules — order matters: data first, app last -->
+<script src="/js/data.js"></script>
+<script src="/js/library.js"></script>
+<script src="/js/detail.js"></script>
+<script src="/js/form.js"></script>
+<script src="/js/parser.js"></script>
+<script src="/js/nutrition.js"></script>
+<script src="/js/planner.js"></script>
+<script src="/js/shopping.js"></script>
+<script src="/js/settings.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
