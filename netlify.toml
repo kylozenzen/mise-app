@@ -5,36 +5,7 @@
 [functions]
   node_bundler = "esbuild"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[headers]]
-  for = "/icons/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/manifest.json"
-  [headers.values]
-    Cache-Control = "public, max-age=3600"
-    Content-Type = "application/manifest+json"
-
-# Redirect root to app
 [[redirects]]
-  from = "/"
+  from = "/*"
   to = "/index.html"
   status = 200
-
-# Force Netlify to attach a secure, local-first key-value store to your backend functions
-[plugins]
-  [[plugins]]
-  package = "@netlify/plugin-emails" # Optional reference if using email layers
-  
-[functions]
-  node_bundler = "esbuild"
-  # This tells the server to provision blob permissions during the build cycle automatically
-  included_files = ["netlify/functions/**"]
