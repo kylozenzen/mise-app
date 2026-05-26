@@ -3,7 +3,7 @@
  * Cache-first for app shell, network-first for Netlify functions
  */
 
-const CACHE_NAME = 'mise-v1';
+const CACHE_NAME = 'mise-v2';
 const CACHE_URLS = [
   '/',
   '/index.html',
