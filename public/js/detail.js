@@ -3,7 +3,6 @@
 
 let currentRecipe = null;
 
-// ALIAS FOR BACKWARD COMPATIBILITY WITH LIBRARY.JS CLICK HANDLERS
 function openDetail(id) {
   renderRecipeDetail(id);
 }
@@ -11,7 +10,6 @@ function openDetail(id) {
 function renderRecipeDetail(recipeOrId) {
   let recipe = null;
 
-  // Polymorphic check with loose comparison matching (==) to handle string vs number ID mismatches
   if (typeof recipeOrId === 'string' || typeof recipeOrId === 'number') {
     if (typeof recipes !== 'undefined' && Array.isArray(recipes)) {
       recipe = recipes.find(r => r.id == recipeOrId);
@@ -20,12 +18,10 @@ function renderRecipeDetail(recipeOrId) {
     recipe = recipeOrId;
   }
 
-  // ABSOLUTE FALLBACK: If lookup fails but we have a valid object backup structure, use it.
   if (!recipe && recipeOrId && typeof recipeOrId === 'object') {
     recipe = recipeOrId;
   }
 
-  // Strict UI Guard Clause: Force a fallback title if an incomplete object slips through
   if (!recipe) {
     recipe = {
       id: recipeOrId || 'unknown',
@@ -39,8 +35,6 @@ function renderRecipeDetail(recipeOrId) {
   }
 
   currentRecipe = recipe;
-  
-  // Force view routing switch before DOM rendering to prevent frozen animation states
   switchView('detail');
 
   const container = document.getElementById('detail-content');
@@ -49,7 +43,6 @@ function renderRecipeDetail(recipeOrId) {
   const hasMacros = recipe.macros && Object.values(recipe.macros).some(v => v > 0);
   const isSharedView = String(recipe.id).startsWith('shared-');
 
-  // Edit action routing hook visibility guard
   const editButton = document.getElementById('detail-edit-btn');
   if (editButton) {
     editButton.style.display = isSharedView ? 'none' : 'block';
@@ -60,7 +53,6 @@ function renderRecipeDetail(recipeOrId) {
 
   let html = '';
 
-  // Injected Save Call-To-Action Banner if viewing external payload string
   if (isSharedView) {
     html += `
       <div class="shared-recipe-banner" style="background:var(--surface2);padding:16px;border:1px dashed var(--amber);margin-bottom:20px;border-radius:var(--radius-sm);text-align:center">
@@ -95,7 +87,7 @@ function renderRecipeDetail(recipeOrId) {
         <button class="add-to-plan-btn" onclick="if(typeof openATPSheet === 'function') openATPSheet('${recipe.id}')" style="padding:0 14px;height:44px;font-size:13px;margin:0" ${isSharedView ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
           📅 Plan
         </button>
-        <button class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="width:44px;height:44px;border:1px solid var(--border)">
+        <button id="share-btn-node" class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="width:44px;height:44px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:18px;height:18px">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -119,7 +111,6 @@ function renderRecipeDetail(recipeOrId) {
     `;
   }
 
-  // Ingredients with inline list completion toggle class bindings
   if (recipe.ingredients && recipe.ingredients.length) {
     html += `<div class="detail-section"><div class="section-label">Ingredients</div>`;
     recipe.ingredients.forEach((ing) => {
@@ -134,7 +125,6 @@ function renderRecipeDetail(recipeOrId) {
     html += `</div>`;
   }
 
-  // Method steps rendering pass
   if (recipe.steps && recipe.steps.length) {
     html += `<div class="detail-section"><div class="section-label">Method</div>`;
     recipe.steps.forEach((step, i) => {
@@ -147,7 +137,6 @@ function renderRecipeDetail(recipeOrId) {
     html += `</div>`;
   }
 
-  // Footer cleanup control array action rows
   html += `
     <div class="detail-actions">
       <button class="action-btn danger" onclick="deleteRecipe('${recipe.id}')" ${isSharedView ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>Delete Recipe</button>
@@ -168,7 +157,6 @@ function scaleRecipe(dir) {
 
   const factor = next / base;
 
-  // Scale embedded visual quantity fields instantly inside active DOM list elements
   document.querySelectorAll('.ing-amount').forEach(span => {
     const baseAmt = parseFloat(span.dataset.base);
     if (!isNaN(baseAmt)) {
@@ -189,33 +177,55 @@ function formatAmount(num) {
   return num.toFixed(1).replace(/\.0$/, '');
 }
 
-// ── SHARE SERIALIZATION MATRIX CONTROLLER ───────────────────────────────
-function shareCurrentRecipe() {
+// ── NEW SHORT LINK GEN (OPTION B SERVERLESS INTEGRATION) ───────────────────
+async function shareCurrentRecipe() {
   if (!currentRecipe) return;
 
+  const shareBtn = document.getElementById('share-btn-node');
+  if (shareBtn) shareBtn.disabled = true;
+  showToast('Generating short sharing link… ⏳');
+
   try {
-    const jsonStr = JSON.stringify(currentRecipe);
-    const encodedPayload = btoa(encodeURIComponent(jsonStr));
-    const finalDeepLink = `${window.location.origin}/index.html?shared=1&data=${encodedPayload}`;
+    // Post recipe snapshot payload data matrix right to server blob route
+    const response = await fetch('/.netlify/functions/share-store', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe: currentRecipe })
+    });
+
+    if (!response.ok) throw new Error('Network cloud database rejection');
+    const data = await response.json();
+
+    // Build the short 6-character link path structure cleanly
+    const shortLink = `${window.location.origin}/index.html?id=${data.id}`;
 
     if (navigator.share) {
       navigator.share({
         title: `Mise — ${currentRecipe.title}`,
         text: `Check out this recipe for ${currentRecipe.title}!`,
-        url: finalDeepLink
-      }).catch(err => console.log('Share canceled or blocked:', err));
+        url: shortLink
+      }).catch(err => console.log('Share dismissed:', err));
     } else {
-      navigator.clipboard.writeText(finalDeepLink).then(() => {
-        showToast('Link copied to your clipboard! 📋');
+      navigator.clipboard.writeText(shortLink).then(() => {
+        showToast('Short link copied to clipboard! 📋');
       });
     }
   } catch (e) {
-    console.error("Compression link breakdown:", e);
-    showToast('Failed to build shared deep link metadata.');
+    console.error("Cloud share upload crash, using serverless fallback strategy:", e);
+    
+    // Infallible local fallback pattern if the database endpoint is entirely unreachable offline
+    const fallbackStr = JSON.stringify(currentRecipe);
+    const encodedFallback = btoa(encodeURIComponent(fallbackStr));
+    const localLink = `${window.location.origin}/index.html?shared=1&data=${encodedFallback}`;
+    
+    navigator.clipboard.writeText(localLink).then(() => {
+      showToast('Offline fallback link generated & copied! 📋');
+    });
+  } finally {
+    if (shareBtn) shareBtn.disabled = false;
   }
 }
 
-// ── IMPORT INTERCEPT COMMIT HANDLER ─────────────────────────────────────
 function saveSharedToLibrary() {
   if (!currentRecipe) return;
   
