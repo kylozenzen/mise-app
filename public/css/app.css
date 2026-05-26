@@ -1226,3 +1226,17 @@
   color: var(--text-muted);
   text-align: center;
 }
+
+/* Inline Cooking Checklist Strikethrough Interaction Utility */
+.detail-ingredients li, 
+.detail-steps li {
+  cursor: pointer;
+  transition: opacity 0.15s ease, text-decoration 0.15s ease;
+}
+
+.detail-ingredients li.strike-completed, 
+.detail-steps li.strike-completed {
+  text-decoration: line-through;
+  opacity: 0.35;
+  color: var(--text-muted);
+}
