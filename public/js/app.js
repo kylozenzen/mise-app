@@ -23,7 +23,6 @@ function goBack() {
 
 function handleOverlayClick(e, id) {
   if (e.target.id === id) {
-    // Close whichever sheet is open
     document.getElementById(id).classList.remove('open');
   }
 }
@@ -39,8 +38,6 @@ function showToast(msg) {
 }
 
 // ── KEYBOARD / VIEWPORT FIX ──────────────────────────────────────────────────
-// When the mobile keyboard opens, the visual viewport shrinks.
-// We detect this and shift any open sheet up so inputs stay visible.
 function initViewportHandler() {
   if (!window.visualViewport) return;
 
@@ -52,13 +49,13 @@ function initViewportHandler() {
     lastHeight     = vh;
 
     const sheets   = document.querySelectorAll('.sheet-overlay.open .sheet');
-    const isOpen   = shrink > 80; // keyboard appeared (> 80px shrink)
-    const isClosed = shrink < -80; // keyboard dismissed
+    const isOpen   = shrink > 80;
+    const isClosed = shrink < -80;
 
     if (isOpen || isClosed) {
       sheets.forEach(sheet => {
         if (isOpen) {
-          const offset = Math.max(0, shrink - 20); // 20px breathing room
+          const offset = Math.max(0, shrink - 20);
           document.documentElement.style.setProperty('--kb-offset', `-${offset}px`);
           sheet.classList.add('keyboard-open');
         } else {
@@ -71,16 +68,14 @@ function initViewportHandler() {
 
   window.visualViewport.addEventListener('resize', onViewportChange);
 
-  // Also scroll focused input into view after a short delay
   document.addEventListener('focusin', e => {
     if (e.target.matches('input, textarea, select')) {
       setTimeout(() => {
         e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 320); // wait for keyboard animation
+      }, 320);
     }
   });
 
-  // Reset offset when sheets close
   document.addEventListener('click', e => {
     if (e.target.classList.contains('sheet-overlay') || e.target.closest('.icon-btn[onclick*="close"]')) {
       document.documentElement.style.setProperty('--kb-offset', '0px');
@@ -100,8 +95,35 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-loadTheme();            // Now properly boots silently with the updated loadTheme argument configuration
+loadTheme();
 seedIfEmpty();
 renderLibrary();
 obCheck();
 initViewportHandler();
+
+// ── NEW: INTERCEPT QUICK-SHARE DEEP LINKS ────────────────────────────────────
+(function checkIncomingShares() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('shared') === '1' && urlParams.get('data')) {
+    try {
+      // Unpack base64 compression parameters
+      const decodedData = decodeURIComponent(atob(urlParams.get('data')));
+      const sharedRecipe = JSON.parse(decodedData);
+      
+      // Enforce unique temporary runtime namespace identifier tag
+      sharedRecipe.id = 'shared-' + Date.now();
+      
+      setTimeout(() => {
+        // Scrape address parameters away so page reloads don't loop the user
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Push object schema straight to detail engine
+        renderRecipeDetail(sharedRecipe);
+      }, 150);
+      
+    } catch (err) {
+      console.error("Deep link unpacking crash:", err);
+      showToast("Could not parse shared recipe payload link.");
+    }
+  }
+})();
