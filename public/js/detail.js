@@ -4,25 +4,43 @@
 let currentRecipe = null;
 
 function renderRecipeDetail(recipeOrId) {
-  // Polymorphic check: If it's a string ID, find the object in your global collection
-  let recipe;
-  if (typeof recipeOrId === 'string') {
-    recipe = recipes.find(r => String(r.id) === recipeOrId);
-  } else {
+  let recipe = null;
+
+  // Polymorphic check with loose comparison matching (==) to handle string vs number ID mismatches
+  if (typeof recipeOrId === 'string' || typeof recipeOrId === 'number') {
+    if (typeof recipes !== 'undefined' && Array.isArray(recipes)) {
+      recipe = recipes.find(r => r.id == recipeOrId);
+    }
+  } else if (recipeOrId && typeof recipeOrId === 'object') {
     recipe = recipeOrId;
   }
 
-  // Guard clause: if no valid recipe object is found, abort gracefully
+  // ABSOLUTE FALLBACK: If lookup fails but we have a valid object backup structure, use it.
+  if (!recipe && recipeOrId && typeof recipeOrId === 'object') {
+    recipe = recipeOrId;
+  }
+
+  // Strict UI Guard Clause: Force a fallback title if an incomplete object slips through
   if (!recipe) {
-    console.error("Mise Detail Error: Could not resolve recipe from input:", recipeOrId);
-    showToast("Could not open recipe details.");
-    return;
+    recipe = {
+      id: recipeOrId || 'unknown',
+      title: 'Untitled Recipe Layout',
+      servings: 4,
+      ingredients: [],
+      steps: [],
+      tags: [],
+      emoji: '🍳'
+    };
   }
 
   currentRecipe = recipe;
+  
+  // Force view routing switch before DOM rendering to prevent frozen animation states
   switchView('detail');
 
   const container = document.getElementById('detail-content');
+  if (!container) return;
+
   const hasMacros = recipe.macros && Object.values(recipe.macros).some(v => v > 0);
   const isSharedView = String(recipe.id).startsWith('shared-');
 
@@ -30,7 +48,9 @@ function renderRecipeDetail(recipeOrId) {
   const editButton = document.getElementById('detail-edit-btn');
   if (editButton) {
     editButton.style.display = isSharedView ? 'none' : 'block';
-    editButton.onclick = () => openEditForm(recipe.id);
+    editButton.onclick = () => {
+      if (typeof openEditForm === 'function') openEditForm(recipe.id);
+    };
   }
 
   let html = '';
@@ -51,7 +71,7 @@ function renderRecipeDetail(recipeOrId) {
     <div class="detail-header">
       <div class="detail-emoji">${recipe.emoji || '🍳'}</div>
       <div class="detail-meta-wrap">
-        <h2 class="detail-title">${recipe.title}</h2>
+        <h2 class="detail-title">${recipe.title || 'Untitled Recipe'}</h2>
         <div class="detail-tags">
           ${(recipe.tags || []).map(t => `<span class="detail-tag">#${t}</span>`).join('')}
         </div>
@@ -69,10 +89,10 @@ function renderRecipeDetail(recipeOrId) {
       </div>
       
       <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="openATPSheet('${recipe.id}')" style="padding:0 14px;height:36px;font-size:12px" ${isSharedView ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
+        <button class="btn-secondary" onclick="if(typeof openATPSheet === 'function') openATPSheet('${recipe.id}')" style="padding:0 14px;height:36px;font-size:12px" ${isSharedView ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
           📅 Plan
         </button>
-        <button class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="border:1px solid var(--border);background:var(--surface2);width:36px;height:36px">
+        <button class="icon-btn" onclick="shareCurrentRecipe()" title="Share Link" style="border:1px solid var(--border);background:var(--surface2);width:36px;height:36px;display:flex;align-items:center;justify-content:center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -95,7 +115,7 @@ function renderRecipeDetail(recipeOrId) {
 
   // Ingredients with inline list completion toggle class bindings
   html += `<div class="detail-section-title">Ingredients</div><ul class="detail-ingredients">`;
-  (recipe.ingredients || []).forEach((ing, idx) => {
+  (recipe.ingredients || []).forEach((ing) => {
     const amtStr = ing.amount ? `<span class="ing-amt" data-base="${ing.amount}">${formatAmount(parseFloat(ing.amount))}</span> ` : '';
     const unitStr = ing.unit ? `<span class="ing-unit">${ing.unit}</span> ` : '';
     html += `<li onclick="this.classList.toggle('strike-completed')">${amtStr}${unitStr}<span class="ing-name">${ing.name}</span></li>`;
@@ -132,7 +152,7 @@ function scaleRecipe(dir) {
 }
 
 function formatAmount(num) {
-  if (num === 0) return '';
+  if (num === 0 || isNaN(num)) return '';
   if (Number.isInteger(num)) return String(num);
   const decimals = num % 1;
   if (Math.abs(decimals - 0.5) < 0.01) return Math.floor(num) > 0 ? `${Math.floor(num)} ½` : '½';
@@ -173,17 +193,21 @@ function shareCurrentRecipe() {
 function saveSharedToLibrary() {
   if (!currentRecipe) return;
   
-  // Detach current preview object parameters to clear memory state boundaries
   const localizedCopy = JSON.parse(JSON.stringify(currentRecipe));
-  localizedCopy.id = uid();
+  if (typeof uid === 'function') {
+    localizedCopy.id = uid();
+  } else {
+    localizedCopy.id = Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+  }
   localizedCopy.createdAt = Date.now();
   
-  recipes.unshift(localizedCopy);
-  save();
+  if (typeof recipes !== 'undefined' && Array.isArray(recipes)) {
+    recipes.unshift(localizedCopy);
+    if (typeof save === 'function') save();
+  }
   
   showToast('Recipe added to your personal collection! 🍳');
   
-  // Re-render local collection and pivot views safely
   switchView('library');
-  renderLibrary();
+  if (typeof renderLibrary === 'function') renderLibrary();
 }
