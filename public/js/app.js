@@ -100,7 +100,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
-loadTheme();
+loadTheme();            // Now properly boots silently with the updated loadTheme argument configuration
 seedIfEmpty();
 renderLibrary();
 obCheck();
