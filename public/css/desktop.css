@@ -1,0 +1,216 @@
+/* ── desktop.css ─────────────────────────────────────────────────────────────
+   Mise desktop layout layer. Purely additive — loads after app.css.
+   Mobile (<768px) is completely untouched. No JS changes, no ID changes.
+   Breakpoints: 768px (rail + modals + wide grid), 1080px (planner two-up). */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TIER 1 — TABLET / SMALL DESKTOP (≥768px)
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  /* ── SHELL: clear space for the nav rail, widen the app ── */
+  body { padding-left: 84px; }
+
+  #app {
+    max-width: 1100px;
+    height: 100dvh;
+  }
+
+  /* ── NAV: bottom bar → left rail ── */
+  #bottom-nav {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: auto;
+    transform: none;
+    width: 84px;
+    max-width: none;
+    height: 100dvh;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 4px;
+    padding-top: 76px; /* clears the wordmark zone */
+    border-top: none;
+    border-right: 1px solid var(--border);
+  }
+
+  /* Wordmark in the rail so the brand is always present */
+  #bottom-nav::before {
+    content: 'M.';
+    position: absolute;
+    top: 18px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    color: var(--amber);
+    letter-spacing: -1px;
+  }
+
+  .nav-tab {
+    flex: 0 0 auto;
+    padding: 14px 0;
+    border-left: 2px solid transparent;
+  }
+  .nav-tab.active { border-left-color: var(--amber); }
+
+  /* Scroll areas no longer need bottom-nav clearance */
+  .scroll-area { padding-bottom: 32px; }
+  .day-view { padding-bottom: 32px; }
+
+  /* ── TOAST: bottom nav is gone, drop the toast down ── */
+  .toast {
+    bottom: 28px;
+    left: calc(50% + 42px); /* visually centered over content, not rail */
+  }
+
+  /* ── LIBRARY: real multi-column grid ── */
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 14px;
+    padding: 20px 24px;
+  }
+
+  .search-wrap { padding: 16px 24px 0; }
+  .search-wrap .search-input { max-width: 420px; }
+  .tag-filter-strip { padding: 12px 24px 6px; flex-wrap: wrap; }
+
+  .top-bar, .planner-nav { padding: 0 24px; }
+
+  /* ── SHEETS: bottom drawer → centered modal ── */
+  .sheet-overlay { align-items: center; padding: 24px; }
+
+  .sheet {
+    max-width: 580px;
+    max-height: 85dvh;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    animation: modalIn 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .sheet-handle { display: none; }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Keyboard-offset hack is a mobile concern — neutralize it on desktop */
+  .sheet.keyboard-open { transform: none; }
+  .sheet.keyboard-open .sheet-body::after { height: 0; }
+
+  /* ── DETAIL: comfortable reading column ── */
+  #view-detail .scroll-area > * {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .detail-title { font-size: 34px; }
+
+  /* ── PLANNER: center the day column, let the strip breathe ── */
+  .week-strip { justify-content: center; padding: 16px 24px 10px; }
+  .week-chip { min-width: 56px; }
+
+  .day-view {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  /* ── ONBOARDING: contain it like a card, not a takeover ── */
+  #onboarding { max-width: 520px; }
+
+  /* ── SCROLLBARS: desktop users expect them — subtle, on-theme ── */
+  .scroll-area, .day-view, .sheet-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-light) transparent;
+  }
+  .scroll-area::-webkit-scrollbar,
+  .day-view::-webkit-scrollbar,
+  .sheet-body::-webkit-scrollbar { display: block; width: 6px; }
+  .scroll-area::-webkit-scrollbar-thumb,
+  .day-view::-webkit-scrollbar-thumb,
+  .sheet-body::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 3px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TIER 2 — WIDE DESKTOP (≥1080px): planner goes two-up
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1080px) {
+
+  .day-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+    align-content: start;
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Summary, goals, and macro bar span the full width;
+     the four meal slots fill the two columns beneath. */
+  .day-view .weekly-summary,
+  .day-view .goals-panel,
+  .day-view .daily-macro-bar { grid-column: 1 / -1; }
+
+  .library-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   HOVER STATES — existing :active states, mirrored for mouse users.
+   Scoped to (hover:hover) so touch devices never see sticky hovers.
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (hover: hover) and (pointer: fine) {
+
+  .recipe-card { transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s; }
+  .recipe-card:hover {
+    border-color: var(--amber-dim);
+    transform: translateY(-2px);
+  }
+
+  .icon-btn:hover { background: var(--surface3); }
+  .nav-tab:hover { color: var(--cream-dim); }
+  .nav-tab.active:hover { color: var(--amber); }
+
+  .btn-primary:hover { background: var(--amber-bright); }
+  .btn-secondary:hover { border-color: var(--amber-dim); color: var(--cream); }
+  .add-row-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .week-chip:hover { border-color: var(--border-light); }
+  .week-chip.active:hover { border-color: var(--amber); }
+
+  .tag-filter-chip:hover { border-color: var(--amber-dim); color: var(--cream-dim); }
+  .tag-filter-chip.active:hover { color: var(--amber-bright); }
+
+  .picker-recipe-item:hover,
+  .settings-row:hover { border-color: var(--amber-dim); background: var(--surface3); }
+
+  .servings-btn:hover { background: var(--amber-dim); border-color: var(--amber-dim); }
+  .meal-remove-btn:hover { border-color: var(--red); color: var(--red); }
+  .remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .add-meal-btn:hover { color: var(--amber); }
+  .action-btn:hover { background: var(--surface2); }
+  .theme-swatch:hover { border-color: var(--border-light); }
+  .theme-swatch.active:hover { border-color: var(--amber); }
+
+  .ingredient-list-item:hover, .step-item:hover { opacity: 0.85; }
+  .ingredient-list-item.strike-completed:hover,
+  .step-item.strike-completed:hover { opacity: 0.5; }
+}
+
+/* ── VOLT THEME on desktop: keep the rail on-brand ── */
+@media (min-width: 768px) {
+  [data-theme="volt"] #bottom-nav {
+    border-right: 2px solid var(--amber);
+    border-top: none;
+  }
+  [data-theme="volt"] .sheet { border-radius: 0; }
+  [data-theme="volt"] #bottom-nav::before { color: var(--amber); }
+}

@@ -8,6 +8,7 @@ const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_LABELS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 let activeDayKey = null;
+let weekOffset   = 0;
 let pickerSlot   = null;
 let atpRecipeId  = null;
 
@@ -17,13 +18,25 @@ function getWeekDays() {
   const dow   = today.getDay();
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - dow + i);
+    d.setDate(today.getDate() - dow + (weekOffset * 7) + i);
     return d;
   });
 }
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function navigateWeek(direction) {
+  weekOffset += direction;
+  activeDayKey = weekOffset === 0 ? dayKey(new Date()) : dayKey(getWeekDays()[0]);
+  initPlanner();
+}
+
+function goToCurrentWeek() {
+  weekOffset = 0;
+  activeDayKey = dayKey(new Date());
+  initPlanner();
 }
 
 function getDayMeals(k) {
@@ -55,6 +68,7 @@ function initPlanner() {
   const first = days[0], last = days[6];
   document.getElementById('planner-week-label').textContent =
     `${MONTH_LABELS[first.getMonth()]} ${first.getDate()} – ${MONTH_LABELS[last.getMonth()]} ${last.getDate()}`;
+  document.getElementById('planner-today-btn').hidden = weekOffset === 0;
 
   const strip = document.getElementById('week-strip');
   strip.innerHTML = '';

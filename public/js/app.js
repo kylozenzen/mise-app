@@ -1,6 +1,63 @@
 // ── app.js ───────────────────────────────────────────────────────────────────
 // Shell: view routing, nav, toast, uid, SW registration, init
 
+// ── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+let errorOverlayShown = false;
+
+function exportEmergencyBackup() {
+  const stored = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('mise_')) stored[key] = localStorage.getItem(key);
+  }
+
+  function parseStored(key, fallback) {
+    try {
+      return JSON.parse(stored[key] || fallback);
+    } catch (err) {
+      return fallback === '[]' ? [] : {};
+    }
+  }
+
+  const backup = {
+    recipes: parseStored('mise_recipes', '[]'),
+    mealPlan: parseStored('mise_mealplan', '{}'),
+    goals: parseStored('mise_goals', '{}'),
+    localStorage: stored,
+    exportedAt: new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: `mise-emergency-backup-${new Date().toISOString().slice(0,10)}.json` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showErrorOverlay(event) {
+  console.error('Mise uncaught error:', event);
+  if (errorOverlayShown) return;
+  errorOverlayShown = true;
+
+  const overlay = document.createElement('div');
+  overlay.setAttribute('role', 'alert');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);color:var(--cream);font-family:\'Lato\',sans-serif;text-align:center';
+  overlay.innerHTML = `<div style="width:100%;max-width:440px;padding:32px 24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+    <div style="font-size:52px;margin-bottom:14px">🍳</div>
+    <h1 style="margin:0 0 10px;font-family:'DM Serif Display',serif;font-size:32px;font-weight:400;color:var(--cream)">Something burned</h1>
+    <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:var(--cream-dim)">An unexpected error broke this screen. Your recipes are safe — they live on your device.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+      <button id="error-reload-btn" class="btn-primary" style="width:auto;margin:0;padding:12px 18px">Reload App</button>
+      <button id="error-export-btn" class="btn-secondary" style="width:auto;margin:0;padding:12px 18px">Export Backup</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('error-reload-btn').onclick = () => location.reload();
+  document.getElementById('error-export-btn').onclick = exportEmergencyBackup;
+}
+
+window.addEventListener('error', showErrorOverlay);
+window.addEventListener('unhandledrejection', showErrorOverlay);
+
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function uid() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);

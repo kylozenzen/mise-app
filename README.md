@@ -121,14 +121,14 @@ Exporting your data (Settings → Export recipes) gives you a full JSON backup o
 
 See [IDEAS.md](./IDEAS.md) for the full list. High-level priorities:
 
-- [ ] Tag filtering in the recipe library
-- [ ] Copy a day's meal plan to another day
-- [ ] Shopping list generator from selected recipes
+- [x] Tag filtering in the recipe library
+- [x] Copy a day's meal plan to another day
+- [x] Shopping list generator from selected recipes
 - [ ] Stripe / $50.50 one-time payment + charity split
 - [ ] Additional themes (infrastructure already in place)
 - [ ] Recipe photo support
-- [ ] Multiple week navigation in the planner
-- [ ] PWA install prompt (in-app nudge)
+- [x] Multiple week navigation in the planner
+- [x] PWA install prompt (in-app nudge)
 
 ---
 

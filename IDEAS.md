@@ -4,16 +4,26 @@ Everything we're thinking about building. Roughly ordered by priority and effort
 
 ---
 
-## 🟢 Next Up — High Priority, Smaller Lifts
+## ✅ Shipped
 
 ### Tag Filtering in Library
-The tags exist on every recipe but there's no UI to filter by them yet. A horizontal scroll of tag chips below the search bar — tap "breakfast" or "high protein" and the grid filters instantly. One session.
+Filter the recipe library instantly with tag chips.
 
 ### Copy Day in Planner
-A "Copy to..." button on any planned day that duplicates all meal slots to another day. Big quality-of-life for people who eat the same thing multiple days a week or meal prep. One session.
+Copy every meal slot from one displayed-week day to another.
+
+### Shopping List Generator
+Generate and check off a combined shopping list from saved recipes.
 
 ### PWA Install Prompt
-An in-app banner or settings row that nudges users to "Add to Home Screen." iOS requires manual steps but we can detect if the app is running in browser vs standalone mode and show guidance accordingly. Half a session.
+Install Mise from an in-app banner or the Settings sheet, with iOS guidance.
+
+### Multiple Week Navigation
+Browse, plan, and revisit past and future weeks.
+
+---
+
+## 🟢 Next Up — High Priority, Smaller Lifts
 
 ### Recipe Count Badge
 Show the total number of saved recipes somewhere subtle in the library header. Small but satisfying.
@@ -22,17 +32,11 @@ Show the total number of saved recipes somewhere subtle in the library header. S
 
 ## 🟡 Medium Builds — Higher Value, More Work
 
-### Shopping List Generator
-Select one or more recipes → generate a combined ingredient list, grouped by category (produce, proteins, pantry, dairy, etc.). Quantities combine when the same ingredient appears in multiple recipes. Check off items as you shop. Two sessions.
-
 ### Tag Filtering + Sort Options
 Beyond the chip strip — add sort options to the library: newest, alphabetical, by calorie count, by protein. Pairs with tag filter. One session.
 
 ### Nutrition Label View
 Full FDA-style nutrition fact panel on each recipe detail page. Pulls from stored macros, adds optional fields for fiber, sugar, sodium. Good for anyone tracking seriously. One session.
-
-### Multiple Week Navigation
-The planner is locked to the current week. Previous/next week arrows would make it a real long-term planning tool. Store meal plans keyed by week so history persists. One to two sessions.
 
 ### Recipe Photo Support
 Let users add a photo to a recipe — either from their camera roll or auto-fetched from the URL import. Stored as base64 in localStorage (with a size cap). Displayed in detail view and optionally on cards. Two sessions.
@@ -125,5 +129,5 @@ The CSS variable system and Settings UI are in place. Each theme just needs its 
 
 ---
 
-*Last updated: May 2026*
+*Last updated: June 2026*
 *Built by Nobody Studios — nobodycreative.com*

@@ -4,7 +4,7 @@
  */
 
 // 1. Incrementing version to 'mise-v2' immediately kills the 'mise-v1' cache layer
-const CACHE_NAME = 'mise-v9';
+const CACHE_NAME = 'mise-v10';
 
 // 2. Added all explicit css layout files and js feature modules to guarantee synchronization
 const CACHE_URLS = [
@@ -13,6 +13,7 @@ const CACHE_URLS = [
   '/manifest.json',
   '/css/themes.css',
   '/css/app.css',
+  '/css/desktop.css',
   '/js/data.js',
   '/js/library.js',
   '/js/detail.js',
@@ -22,6 +23,7 @@ const CACHE_URLS = [
   '/js/planner.js',
   '/js/shopping.js',
   '/js/settings.js',
+  '/js/install.js',
   '/js/app.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
