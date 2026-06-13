@@ -30,6 +30,7 @@ function dismissInstallBanner() {
 }
 
 function showInstallBanner() {
+  if (!localStorage.getItem('mise_onboarded')) return;
   if (isStandalone || localStorage.getItem('mise_install_dismissed') || document.getElementById('install-banner')) return;
   const banner = document.createElement('div');
   banner.id = 'install-banner';

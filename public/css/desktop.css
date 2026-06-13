@@ -119,8 +119,13 @@
     padding-right: 24px;
   }
 
-  /* ── ONBOARDING: contain it like a card, not a takeover ── */
-  #onboarding { max-width: 520px; }
+  /* ── ONBOARDING: full-screen takeover on desktop too, content capped ── */
+  #onboarding {
+    max-width: none;
+    margin: 0;
+  }
+  #onboarding .ob-feature-list { max-width: 460px; }
+  #onboarding .ob-footer { max-width: 460px; width: 100%; margin: 0 auto; }
 
   /* ── SCROLLBARS: desktop users expect them — subtle, on-theme ── */
   .scroll-area, .day-view, .sheet-body {
