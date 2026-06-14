@@ -4,7 +4,7 @@
  */
 
 // 1. Incrementing version to 'mise-v2' immediately kills the 'mise-v1' cache layer
-const CACHE_NAME = 'mise-v10';
+const CACHE_NAME = 'mise-v11';
 
 // 2. Added all explicit css layout files and js feature modules to guarantee synchronization
 const CACHE_URLS = [
