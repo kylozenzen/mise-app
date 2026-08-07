@@ -3,10 +3,8 @@
  * Cache-first for app shell, network-first for Netlify functions
  */
 
-// 1. Incrementing version to 'mise-v2' immediately kills the 'mise-v1' cache layer
-const CACHE_NAME = 'mise-v11';
+const CACHE_NAME = 'mise-v12';
 
-// 2. Added all explicit css layout files and js feature modules to guarantee synchronization
 const CACHE_URLS = [
   '/',
   '/index.html',
@@ -14,6 +12,7 @@ const CACHE_URLS = [
   '/css/themes.css',
   '/css/app.css',
   '/css/desktop.css',
+  '/css/family.css',
   '/js/data.js',
   '/js/library.js',
   '/js/detail.js',
@@ -25,11 +24,11 @@ const CACHE_URLS = [
   '/js/settings.js',
   '/js/install.js',
   '/js/app.js',
+  '/js/family.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
 
-// ── INSTALL: pre-cache app shell ──────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -38,7 +37,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── ACTIVATE: clean up old caches ─────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
@@ -51,17 +49,14 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ── FETCH: smart routing ──────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Netlify functions — always network, never cache
   if (url.pathname.startsWith('/.netlify/functions/')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Google Fonts — network first, fall back to cache
   if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
     event.respondWith(
       fetch(event.request)
@@ -75,14 +70,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // App shell — cache first, then network
   event.respondWith(
     caches.match(event.request)
       .then(cached => {
         if (cached) return cached;
 
         return fetch(event.request).then(res => {
-          // Cache successful GET responses for app files
           if (res.ok && event.request.method === 'GET') {
             const clone = res.clone();
             caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
@@ -91,7 +84,6 @@ self.addEventListener('fetch', event => {
         });
       })
       .catch(() => {
-        // Offline fallback for navigation requests
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
