@@ -55,18 +55,17 @@ function closeSettingsSheet() {
 const THEME_COLORS = {
   ember:    '#0f0d09',
   midnight: '#0a0e1a',
-  garden:   '#f5f2eb',
+  garden:   '#FBF9F5',
   dusk:     '#12091e',
   flame:    '#0a0a0a',
   spice:    '#f7efe4',
   volt:     '#000000',
 };
 
-// Added showNotification flag defaulting to true for explicit user switch interactions
 function setTheme(name, showNotification = true) {
   document.documentElement.setAttribute('data-theme', name);
   localStorage.setItem('mise_theme', name);
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', THEME_COLORS[name] || '#0f0d09');
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', THEME_COLORS[name] || '#FBF9F5');
 
   document.querySelectorAll('.theme-swatch').forEach(el => {
     el.classList.toggle('active', el.dataset.theme === name);
@@ -78,29 +77,55 @@ function setTheme(name, showNotification = true) {
     }
   });
 
-  // Only dispatch standard feedback alert if true
   if (showNotification) {
     showToast(`${name.charAt(0).toUpperCase() + name.slice(1)} theme applied`);
   }
 }
 
 function loadTheme() {
-  // Pass false here to guarantee a silent bootstrap injection sequence on boot
-  setTheme(localStorage.getItem('mise_theme') || 'ember', false);
+  // Family-first Mise defaults to the warm Garden identity. Existing theme choices persist.
+  setTheme(localStorage.getItem('mise_theme') || 'garden', false);
 }
 
 // ── DATA ─────────────────────────────────────────────────────────────────────
 function exportData() {
-  const blob = new Blob([JSON.stringify({ recipes, mealPlan, goals, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+  let family = null;
+  try { family = JSON.parse(localStorage.getItem('mise_family_v2') || 'null'); } catch (_) { family = null; }
+  const blob = new Blob([JSON.stringify({ recipes, mealPlan, goals, family, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), { href: url, download: `mise-backup-${new Date().toISOString().slice(0,10)}.json` });
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Recipes exported ✓');
+  showToast('Mise data exported ✓');
 }
 
 function clearAllData() {
-  if (!confirm('This will delete all recipes and meal plans. Are you sure?')) return;
-  ['mise_recipes','mise_mealplan','mise_goals','mise_onboarded'].forEach(k => localStorage.removeItem(k));
+  if (!confirm('This will delete all recipes, meal plans, family notes, and meal feedback. Are you sure?')) return;
+  ['mise_recipes','mise_mealplan','mise_goals','mise_onboarded','mise_family_v2','mise_family_theme_migrated'].forEach(k => localStorage.removeItem(k));
   location.reload();
+}
+
+// ── MISE 2.0 FAMILY MODE ASSETS ─────────────────────────────────────────────
+function loadFamilyModeAssets() {
+  if (!document.getElementById('mise-family-css')) {
+    const link = document.createElement('link');
+    link.id = 'mise-family-css';
+    link.rel = 'stylesheet';
+    link.href = '/css/family.css';
+    document.head.appendChild(link);
+  }
+
+  if (!document.getElementById('mise-family-js')) {
+    const script = document.createElement('script');
+    script.id = 'mise-family-js';
+    script.src = '/js/family.js';
+    script.defer = true;
+    document.body.appendChild(script);
+  }
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', loadFamilyModeAssets, { once: true });
+} else {
+  loadFamilyModeAssets();
 }
